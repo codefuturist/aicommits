@@ -197,11 +197,9 @@ aicommits config set proxy=
 
 #### model
 
-Default: `gpt-3.5-turbo`
+Default: `gpt-5-mini`
 
 The Chat Completions (`/v1/chat/completions`) model to use. Consult the list of models available in the [OpenAI Documentation](https://platform.openai.com/docs/models/model-endpoint-compatibility).
-
-> Tip: If you have access, try upgrading to [`gpt-4`](https://platform.openai.com/docs/models/gpt-4) for next-level code analysis. It can handle double the input size, but comes at a higher cost. Check out OpenAI's website to learn more.
 
 #### timeout
 
@@ -241,7 +239,7 @@ aicommits config set type=
 
 ## How it works
 
-This CLI tool runs `git diff` to grab all your latest code changes, sends them to OpenAI's GPT-3, then returns the AI generated commit message.
+This CLI tool runs `git diff` to grab all your latest code changes, sends them to OpenAI's GPT-5-mini, then returns the AI generated commit message.
 
 Video coming soon where I rebuild it from scratch to show you how to easily build your own CLI tools powered by AI.
 
