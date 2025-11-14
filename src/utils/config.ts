@@ -22,7 +22,11 @@ const parseAssert = (name: string, condition: any, message: string) => {
 
 const configParsers = {
 	OPENAI_KEY(key?: string) {
-		return key; // Optional
+		if (key) {
+			parseAssert('OPENAI_KEY', key.startsWith('sk-'), 'Must start with "sk-"');
+			// Key can range from 43~51 characters. There's no spec to assert this.
+		}
+		return key;
 	},
 	TOGETHER_API_KEY(key?: string) {
 		return key; // Optional

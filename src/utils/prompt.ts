@@ -44,7 +44,7 @@ export const generatePrompt = (
 	type: CommitType
 ) =>
 	[
-		'Generate a concise git commit message written in present tense for the following code diff with the given specifications below:',
+		'Write a detailed and accurate git commit message in present tense that precisely describes the key changes in the following code diff. Focus on what was changed, not just file names.',
 		`Message language: ${locale}`,
 		`Commit message must be a maximum of ${maxLength} characters.`,
 		'Exclude anything unnecessary such as translation. Your entire response will be passed directly into git commit.',

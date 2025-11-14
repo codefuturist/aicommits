@@ -93,7 +93,7 @@ export default testSuite(({ describe }) => {
 
 			test('updates config', async () => {
 				const defaultConfig = await aicommits(['config', 'get', 'max-length']);
-				expect(defaultConfig.stdout).toBe('max-length=50');
+				expect(defaultConfig.stdout).toBe('max-length=72');
 
 				const maxLength = 'max-length=60';
 				await aicommits(['config', 'set', maxLength]);
