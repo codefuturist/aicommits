@@ -80,7 +80,7 @@ const configParsers = {
 	},
 	model(model?: string) {
 		if (!model || model.length === 0) {
-			return 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+			return 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
 		}
 
 		return model;
@@ -94,7 +94,7 @@ const configParsers = {
 	},
 	'together-model'(model?: string) {
 		if (!model || model.length === 0) {
-			return 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+			return 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
 		}
 
 		return model;

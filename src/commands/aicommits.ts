@@ -67,6 +67,7 @@ export default async (
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
+		const startTime = Date.now();
 		let messages: string[];
 		try {
 			messages = await generateCommitMessage(
@@ -82,7 +83,8 @@ export default async (
 				config.proxy
 			);
 		} finally {
-			s.stop('Changes analyzed');
+			const duration = Date.now() - startTime;
+			s.stop(`Changes analyzed in ${duration}ms`);
 		}
 
 		if (messages.length === 0) {

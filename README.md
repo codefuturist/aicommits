@@ -29,7 +29,7 @@
    aicommits config set TOGETHER_API_KEY=<your token>
    ```
 
-    > If you have an OpenAI key set, it will use OpenAI automatically. Otherwise, it defaults to TogetherAI.
+   > If you have an OpenAI key set, it will use OpenAI automatically. Otherwise, it defaults to TogetherAI.
 
    This will create a `.aicommits` file in your home directory.
 
@@ -201,7 +201,7 @@ aicommits config set proxy=
 
 #### model
 
-Default: `meta-llama/Llama-3.3-70B-Instruct-Turbo`
+Default: `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo`
 
 The Chat Completions (`/v1/chat/completions`) model to use. For TogetherAI, see [TogetherAI models](https://docs.together.ai/docs/inference-models). For OpenAI, see [OpenAI models](https://platform.openai.com/docs/models/model-endpoint-compatibility).
 

@@ -62,7 +62,7 @@ export default testSuite(({ describe }) => {
 			const commitMessages = await generateCommitMessage(
 				'api.together.xyz',
 				TOGETHER_API_KEY!,
-				'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+				'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
 				config.locale,
 				gitDiff,
 				config.generate,

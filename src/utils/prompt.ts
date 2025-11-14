@@ -44,7 +44,7 @@ export const generatePrompt = (
 	type: CommitType
 ) =>
 	[
-		'Write a detailed and accurate git commit message in present tense that precisely describes the key changes in the following code diff. Focus on what was changed, not just file names.',
+		'Write a concise git commit message title in present tense that precisely describes the key changes in the following code diff. Focus on what was changed, not just file names. Provide only the title, no description or body.',
 		`Message language: ${locale}`,
 		`Commit message must be a maximum of ${maxLength} characters.`,
 		'Exclude anything unnecessary such as translation. Your entire response will be passed directly into git commit.',
