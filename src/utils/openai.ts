@@ -139,6 +139,10 @@ export const generateCommitMessage = async (
 	timeout: number,
 	proxy?: string
 ) => {
+	if (process.env.DEBUG) {
+		console.log('Diff being sent to AI:');
+		console.log(diff);
+	}
 	try {
 		const completion = await createChatCompletion(
 			hostname,

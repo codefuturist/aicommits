@@ -60,7 +60,10 @@ export default async (
 			type: commitType?.toString(),
 		});
 
-		const { hostname, apiKey } = getProviderInfo(config);
+		const { hostname, apiKey, provider } = getProviderInfo(config);
+
+		// Use provider-specific model
+		config.model = provider === 'openai' ? config['openai-model'] : config['together-model'];
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');

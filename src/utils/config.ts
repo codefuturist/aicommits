@@ -85,6 +85,20 @@ const configParsers = {
 
 		return model;
 	},
+	'openai-model'(model?: string) {
+		if (!model || model.length === 0) {
+			return 'gpt-5-mini';
+		}
+
+		return model;
+	},
+	'together-model'(model?: string) {
+		if (!model || model.length === 0) {
+			return 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
+		}
+
+		return model;
+	},
 	timeout(timeout?: string) {
 		if (!timeout) {
 			return 10_000;
@@ -123,6 +137,9 @@ type RawConfig = {
 
 export type ValidConfig = {
 	[Key in ConfigKeys]: ReturnType<(typeof configParsers)[Key]>;
+} & {
+	'openai-model': string;
+	'together-model': string;
 };
 
 const getConfigPath = () => path.join(os.homedir(), '.aicommits');
