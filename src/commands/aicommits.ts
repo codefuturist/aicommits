@@ -13,7 +13,7 @@ import {
 	getStagedDiff,
 	getDetectedMessage,
 } from '../utils/git.js';
-import { getConfig } from '../utils/config.js';
+import { getConfig, getProviderInfo } from '../utils/config.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCliError } from '../utils/error.js';
 
@@ -60,12 +60,15 @@ export default async (
 			type: commitType?.toString(),
 		});
 
+		const { hostname, apiKey } = getProviderInfo(config);
+
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
 		let messages: string[];
 		try {
 			messages = await generateCommitMessage(
-				config.OPENAI_KEY,
+				hostname,
+				apiKey,
 				config.model,
 				config.locale,
 				staged.diff,

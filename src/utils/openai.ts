@@ -1,13 +1,10 @@
 import https from 'https';
 import type { ClientRequest, IncomingMessage } from 'http';
 import type {
-	CreateChatCompletionRequest,
-	CreateChatCompletionResponse,
-} from 'openai';
-import {
-	type TiktokenModel,
-	// encoding_for_model,
-} from '@dqbd/tiktoken';
+	ChatCompletionCreateParams,
+	ChatCompletion,
+	ChatCompletionCreateParamsNonStreaming,
+} from 'openai/resources/chat/completions';
 import createHttpsProxyAgent from 'https-proxy-agent';
 import { KnownError } from './error.js';
 import type { CommitType } from './config.js';
@@ -39,7 +36,7 @@ const httpsPost = async (
 					'Content-Length': Buffer.byteLength(postContent),
 				},
 				timeout,
-				agent: proxy ? createHttpsProxyAgent(proxy) : undefined,
+				agent: proxy ? (createHttpsProxyAgent(proxy) as any) : undefined,
 			},
 			(response) => {
 				const body: Buffer[] = [];
@@ -68,13 +65,14 @@ const httpsPost = async (
 	});
 
 const createChatCompletion = async (
+	hostname: string,
 	apiKey: string,
-	json: CreateChatCompletionRequest,
+	json: ChatCompletionCreateParams,
 	timeout: number,
 	proxy?: string
 ) => {
 	const { response, data } = await httpsPost(
-		'api.openai.com',
+		hostname,
 		'/v1/chat/completions',
 		{
 			Authorization: `Bearer ${apiKey}`,
@@ -102,7 +100,7 @@ const createChatCompletion = async (
 		throw new KnownError(errorMessage);
 	}
 
-	return JSON.parse(data) as CreateChatCompletionResponse;
+	return JSON.parse(data) as ChatCompletion;
 };
 
 const sanitizeMessage = (message: string) =>
@@ -131,8 +129,9 @@ const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
 // };
 
 export const generateCommitMessage = async (
+	hostname: string,
 	apiKey: string,
-	model: TiktokenModel,
+	model: string,
 	locale: string,
 	diff: string,
 	completions: number,
@@ -143,6 +142,7 @@ export const generateCommitMessage = async (
 ) => {
 	try {
 		const completion = await createChatCompletion(
+			hostname,
 			apiKey,
 			{
 				model,
@@ -160,7 +160,7 @@ export const generateCommitMessage = async (
 				top_p: 1,
 				frequency_penalty: 0,
 				presence_penalty: 0,
-				max_tokens: 200,
+				max_tokens: 500,
 				stream: false,
 				n: completions,
 			},
@@ -168,10 +168,11 @@ export const generateCommitMessage = async (
 			proxy
 		);
 
+		const validChoices = completion.choices.filter(
+			(choice: any) => choice.message?.content
+		);
 		return deduplicateMessages(
-			completion.choices
-				.filter((choice) => choice.message?.content)
-				.map((choice) => sanitizeMessage(choice.message!.content as string))
+			validChoices.map((choice: any) => sanitizeMessage(choice.message.content))
 		);
 	} catch (error) {
 		const errorAsAny = error as any;

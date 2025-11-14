@@ -19,15 +19,17 @@
    npm install -g aicommits
    ```
 
-2. Retrieve your API key from [OpenAI](https://platform.openai.com/account/api-keys)
+2. Retrieve your API key from [TogetherAI](https://api.together.ai/)
 
-   > Note: If you haven't already, you'll have to create an account and set up billing.
+   > Note: If you haven't already, you'll have to create an account and get your API key.
 
 3. Set the key so aicommits can use it:
 
    ```sh
-   aicommits config set OPENAI_KEY=<your token>
+   aicommits config set TOGETHER_API_KEY=<your token>
    ```
+
+    > If you have an OpenAI key set, it will use OpenAI automatically. Otherwise, it defaults to TogetherAI.
 
    This will create a `.aicommits` file in your home directory.
 
@@ -165,9 +167,11 @@ aicommits config set OPENAI_KEY=<your-api-key> generate=3 locale=en
 
 ### Options
 
-#### OPENAI_KEY
+#### TOGETHER_API_KEY
 
-Required
+The TogetherAI API key. You can retrieve it from [TogetherAI](https://api.together.ai/).
+
+#### OPENAI_KEY
 
 The OpenAI API key. You can retrieve it from [OpenAI API Keys page](https://platform.openai.com/account/api-keys).
 
@@ -197,9 +201,9 @@ aicommits config set proxy=
 
 #### model
 
-Default: `gpt-5-mini`
+Default: `meta-llama/Llama-3.3-70B-Instruct-Turbo`
 
-The Chat Completions (`/v1/chat/completions`) model to use. Consult the list of models available in the [OpenAI Documentation](https://platform.openai.com/docs/models/model-endpoint-compatibility).
+The Chat Completions (`/v1/chat/completions`) model to use. For TogetherAI, see [TogetherAI models](https://docs.together.ai/docs/inference-models). For OpenAI, see [OpenAI models](https://platform.openai.com/docs/models/model-endpoint-compatibility).
 
 #### timeout
 
@@ -215,7 +219,7 @@ aicommits config set timeout=20000 # 20s
 
 The maximum character length of the generated commit message.
 
-Default: `50`
+Default: `72`
 
 ```sh
 aicommits config set max-length=100
@@ -239,7 +243,7 @@ aicommits config set type=
 
 ## How it works
 
-This CLI tool runs `git diff` to grab all your latest code changes, sends them to OpenAI's GPT-5-mini, then returns the AI generated commit message.
+This CLI tool runs `git diff` to grab all your latest code changes, sends them to the configured AI provider (TogetherAI by default), then returns the AI generated commit message.
 
 Video coming soon where I rebuild it from scratch to show you how to easily build your own CLI tools powered by AI.
 

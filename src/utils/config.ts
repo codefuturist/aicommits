@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import ini from 'ini';
-import type { TiktokenModel } from '@dqbd/tiktoken';
+// import type { TiktokenModel } from '@dqbd/tiktoken';
 import { fileExists } from './fs.js';
 import { KnownError } from './error.js';
 
@@ -22,15 +22,10 @@ const parseAssert = (name: string, condition: any, message: string) => {
 
 const configParsers = {
 	OPENAI_KEY(key?: string) {
-		if (!key) {
-			throw new KnownError(
-				'Please set your OpenAI API key via `aicommits config set OPENAI_KEY=<your token>`'
-			);
-		}
-		parseAssert('OPENAI_KEY', key.startsWith('sk-'), 'Must start with "sk-"');
-		// Key can range from 43~51 characters. There's no spec to assert this.
-
-		return key;
+		return key; // Optional
+	},
+	TOGETHER_API_KEY(key?: string) {
+		return key; // Optional
 	},
 	locale(locale?: string) {
 		if (!locale) {
@@ -82,10 +77,10 @@ const configParsers = {
 	},
 	model(model?: string) {
 		if (!model || model.length === 0) {
-			return 'gpt-5-mini';
+			return 'meta-llama/Llama-3.3-70B-Instruct-Turbo';
 		}
 
-		return model as TiktokenModel;
+		return model;
 	},
 	timeout(timeout?: string) {
 		if (!timeout) {
@@ -101,7 +96,7 @@ const configParsers = {
 	},
 	'max-length'(maxLength?: string) {
 		if (!maxLength) {
-			return 50;
+			return 72;
 		}
 
 		parseAssert('max-length', /^\d+$/.test(maxLength), 'Must be an integer');
@@ -175,4 +170,18 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 	}
 
 	await fs.writeFile(configPath, ini.stringify(config), 'utf8');
+};
+
+export const getProviderInfo = (config: ValidConfig) => {
+	const provider = config.OPENAI_KEY ? 'openai' : 'togetherai';
+	const hostname = provider === 'openai' ? 'api.openai.com' : 'api.together.xyz';
+	const apiKey = provider === 'openai' ? config.OPENAI_KEY : config.TOGETHER_API_KEY;
+
+	if (!apiKey) {
+		throw new KnownError(
+			`Please set your ${provider.toUpperCase()}_KEY via \`aicommits config set ${provider.toUpperCase()}_KEY=<your token>\``
+		);
+	}
+
+	return { provider, hostname, apiKey };
 };
