@@ -1,5 +1,6 @@
 import { dim } from 'kolorist';
-import { version } from '../../package.json';
+import pkg from '../../package.json';
+const { version } = pkg;
 
 export class KnownError extends Error {}
 
