@@ -2,7 +2,6 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import ini from 'ini';
-// import type { TiktokenModel } from '@dqbd/tiktoken';
 import { fileExists } from './fs.js';
 import { KnownError } from './error.js';
 
@@ -126,15 +125,15 @@ export type ValidConfig = {
 	[Key in ConfigKeys]: ReturnType<(typeof configParsers)[Key]>;
 };
 
-const configPath = path.join(os.homedir(), '.aicommits');
+const getConfigPath = () => path.join(os.homedir(), '.aicommits');
 
 const readConfigFile = async (): Promise<RawConfig> => {
-	const configExists = await fileExists(configPath);
+	const configExists = await fileExists(getConfigPath());
 	if (!configExists) {
 		return Object.create(null);
 	}
 
-	const configString = await fs.readFile(configPath, 'utf8');
+	const configString = await fs.readFile(getConfigPath(), 'utf8');
 	return ini.parse(configString);
 };
 
@@ -173,13 +172,15 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 		config[key as ConfigKeys] = parsed as any;
 	}
 
-	await fs.writeFile(configPath, ini.stringify(config), 'utf8');
+	await fs.writeFile(getConfigPath(), ini.stringify(config), 'utf8');
 };
 
 export const getProviderInfo = (config: ValidConfig) => {
 	const provider = config.OPENAI_KEY ? 'openai' : 'togetherai';
-	const hostname = provider === 'openai' ? 'api.openai.com' : 'api.together.xyz';
-	const apiKey = provider === 'openai' ? config.OPENAI_KEY : config.TOGETHER_API_KEY;
+	const hostname =
+		provider === 'openai' ? 'api.openai.com' : 'api.together.xyz';
+	const apiKey =
+		provider === 'openai' ? config.OPENAI_KEY : config.TOGETHER_API_KEY;
 
 	if (!apiKey) {
 		throw new KnownError(

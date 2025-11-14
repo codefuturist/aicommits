@@ -3,9 +3,8 @@ import type { ClientRequest, IncomingMessage } from 'http';
 import type {
 	ChatCompletionCreateParams,
 	ChatCompletion,
-	ChatCompletionCreateParamsNonStreaming,
 } from 'openai/resources/chat/completions';
-import createHttpsProxyAgent from 'https-proxy-agent';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { KnownError } from './error.js';
 import type { CommitType } from './config.js';
 import { generatePrompt } from './prompt.js';
@@ -33,10 +32,10 @@ const httpsPost = async (
 				headers: {
 					...headers,
 					'Content-Type': 'application/json',
-					'Content-Length': Buffer.byteLength(postContent),
+					'Content-Length': String(Buffer.byteLength(postContent)),
 				},
 				timeout,
-				agent: proxy ? (createHttpsProxyAgent(proxy) as any) : undefined,
+				agent: proxy ? (new HttpsProxyAgent(proxy) as any) : undefined,
 			},
 			(response) => {
 				const body: Buffer[] = [];
@@ -169,10 +168,12 @@ export const generateCommitMessage = async (
 		);
 
 		const validChoices = completion.choices.filter(
-			(choice: any) => choice.message?.content
+			(choice) => choice.message?.content
 		);
 		return deduplicateMessages(
-			validChoices.map((choice: any) => sanitizeMessage(choice.message.content))
+			validChoices.map((choice) =>
+				sanitizeMessage(choice.message.content ?? '')
+			)
 		);
 	} catch (error) {
 		const errorAsAny = error as any;
