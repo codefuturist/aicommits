@@ -12,8 +12,6 @@ cli(
 	{
 		name: 'aicommits',
 
-		version,
-
 		/**
 		 * Since this is a wrapper around `git commit`,
 		 * flags should not overlap with it
@@ -43,6 +41,11 @@ cli(
 				description: 'Type of commit message to generate',
 				alias: 't',
 			},
+			version: {
+				type: Boolean,
+				description: 'Show version number',
+				alias: 'v',
+			},
 		},
 
 		commands: [configCommand, hookCommand],
@@ -54,6 +57,11 @@ cli(
 		ignoreArgv: (type) => type === 'unknown-flag' || type === 'argument',
 	},
 	(argv) => {
+		if (argv.flags.version) {
+			console.log(version);
+			process.exit(0);
+		}
+
 		if (isCalledFromGitHook) {
 			prepareCommitMessageHook();
 		} else {
