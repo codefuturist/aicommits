@@ -28,7 +28,10 @@ const configParsers = {
 		return key;
 	},
 	TOGETHER_API_KEY(key?: string) {
-		return key; // Optional
+		if (key) {
+			parseAssert('TOGETHER_API_KEY', key.startsWith('tgp_'), 'Must start with "tgp_"');
+		}
+		return key;
 	},
 	locale(locale?: string) {
 		if (!locale) {
