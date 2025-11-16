@@ -23,7 +23,7 @@ const commitTypes: Record<CommitType, string> = {
 			docs: 'Documentation only changes',
 			style:
 				'Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)',
-			refactor: 'A code change that neither fixes a bug nor adds a feature',
+			refactor: 'A code change that improves code structure without changing functionality (renaming, restructuring classes/methods, extracting functions, etc)',
 			perf: 'A code change that improves performance',
 			test: 'Adding missing tests or correcting existing tests',
 			build: 'Changes that affect the build system or external dependencies',

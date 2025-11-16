@@ -22,6 +22,35 @@ import onboarding from '../utils/onboarding.js';
 import path from 'path';
 import os from 'os';
 
+const getCommitMessage = async (messages: string[], skipConfirm: boolean): Promise<string | null> => {
+	// Single message case
+	if (messages.length === 1) {
+		const [message] = messages;
+
+		if (skipConfirm) {
+			return message;
+		}
+
+		const confirmed = await confirm({
+			message: `Use this commit message?\n\n   ${message}\n`,
+		});
+
+		return confirmed && !isCancel(confirmed) ? message : null;
+	}
+
+	// Multiple messages case
+	if (skipConfirm) {
+		return messages[0];
+	}
+
+	const selected = await select({
+		message: `Pick a commit message to use: ${dim('(Ctrl+c to exit)')}`,
+		options: messages.map((value) => ({ label: value, value })),
+	});
+
+	return isCancel(selected) ? null : (selected as string);
+};
+
 export default async (
 	generate: number | undefined,
 	excludeFiles: string[],
@@ -105,38 +134,14 @@ export default async (
 			throw new KnownError('No commit messages were generated. Try again.');
 		}
 
-		let message: string;
-		if (messages.length === 1) {
-			[message] = messages;
-			if (!skipConfirm) {
-				const confirmed = await confirm({
-					message: `Use this commit message?\n\n   ${message}\n`,
-				});
-
-				if (!confirmed || isCancel(confirmed)) {
-					outro('Commit cancelled');
-					return;
-				}
-			}
-		} else {
-			if (!skipConfirm) {
-				const selected = await select({
-					message: `Pick a commit message to use: ${dim('(Ctrl+c to exit)')}`,
-					options: messages.map((value) => ({ label: value, value })),
-				});
-
-				if (isCancel(selected)) {
-					outro('Commit cancelled');
-					return;
-				}
-
-				message = selected as string;
-			} else {
-				// If skipping confirmation, use the first message
-				message = messages[0];
-			}
+		// Get the commit message
+		const message = await getCommitMessage(messages, skipConfirm);
+		if (!message) {
+			outro('Commit cancelled');
+			return;
 		}
 
+		// Handle clipboard mode (early return)
 		if (copyToClipboard) {
 			try {
 				await clipboard.write(message);
@@ -144,10 +149,12 @@ export default async (
 			} catch (error: any) {
 				// Silently fail if clipboard is not available
 			}
-		} else {
-			await execa('git', ['commit', '-m', message, ...rawArgv]);
-			outro(`${green('✔')} Successfully committed!`);
+			return;
 		}
+
+		// Commit the message
+		await execa('git', ['commit', '-m', message, ...rawArgv]);
+		outro(`${green('✔')} Successfully committed!`);
 	})().catch((error) => {
 		outro(`${red('✖')} ${error.message}`);
 		handleCliError(error);
