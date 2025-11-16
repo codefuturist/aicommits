@@ -16,6 +16,10 @@ import {
 import { getConfig, getProviderInfo } from '../utils/config.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCliError } from '../utils/error.js';
+import { fileExists } from '../utils/fs.js';
+import onboarding from '../utils/onboarding.js';
+import path from 'path';
+import os from 'os';
 
 export default async (
 	generate: number | undefined,
@@ -26,6 +30,13 @@ export default async (
 ) =>
 	(async () => {
 		intro(bgCyan(black(' aicommits ')));
+
+		const configPath = path.join(os.homedir(), '.aicommits');
+		if (!(await fileExists(configPath))) {
+			const result = await onboarding();
+			if (!result) return;
+		}
+
 		await assertGitRepo();
 
 		const detectingFiles = spinner();
