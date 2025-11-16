@@ -3,8 +3,9 @@
     <img src=".github/screenshot.png" alt="AI Commits"/>
     <h1 align="center">AI Commits</h1>
   </div>
-	<p>A CLI that writes your git commit messages for you with AI. Never write a commit message again.</p>
-	<a href="https://www.npmjs.com/package/aicommits"><img src="https://img.shields.io/npm/v/aicommits" alt="Current version"></a>
+  <p>A CLI that writes your git commit messages for you with AI. Never write a commit message again.</p>
+  <a href="https://www.npmjs.com/package/aicommits"><img src="https://img.shields.io/npm/v/aicommits" alt="Current version"></a>
+  <a href="https://www.npmjs.com/package/aicommits"><img src="https://img.shields.io/npm/dt/aicommits" alt="Downloads"></a>
 </div>
 
 ---
@@ -67,6 +68,15 @@ aicommits --all # or -a
 ```
 
 > 👉 **Tip:** Use the `aic` alias if `aicommits` is too long for you.
+
+#### CLI Options
+
+- `--generate` or `-g`: Number of messages to generate (default: **1**)
+- `--exclude` or `-x`: Files to exclude from AI analysis
+- `--all` or `-a`: Automatically stage changes in tracked files for the commit (default: **false**)
+- `--type` or `-t`: Git commit message format (default: **conventional**). Supports `conventional` and `gitmoji`
+- `--confirm` or `-y`: Skip confirmation when committing after message generation (default: **false**)
+- `--clipboard` or `-c`: Copy the selected message to the clipboard instead of committing (default: **false**)
 
 #### Generate multiple recommendations
 
