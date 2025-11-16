@@ -48,6 +48,7 @@ export const generatePrompt = (
 		`Message language: ${locale}`,
 		`Commit message must be a maximum of ${maxLength} characters.`,
 		'Exclude anything unnecessary such as translation. Your entire response will be passed directly into git commit.',
+		'Do not wrap the commit message in quotes or any other formatting - return only the plain commit message text.',
 		commitTypes[type],
 		specifyCommitFormat(type),
 	]

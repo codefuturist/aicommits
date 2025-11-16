@@ -38,8 +38,20 @@ cli(
 			},
 			type: {
 				type: String,
-				description: 'Type of commit message to generate',
+				description: 'Git commit message format (default: conventional). It supports conventional and gitmoji',
 				alias: 't',
+			},
+			confirm: {
+				type: Boolean,
+				description: 'Skip confirmation when committing after message generation (default: false)',
+				alias: 'y',
+				default: false,
+			},
+			clipboard: {
+				type: Boolean,
+				description: 'Copy the selected message to the clipboard instead of committing (default: false)',
+				alias: 'c',
+				default: false,
 			},
 			version: {
 				type: Boolean,
@@ -70,6 +82,8 @@ cli(
 				argv.flags.exclude,
 				argv.flags.all,
 				argv.flags.type,
+				argv.flags.confirm,
+				argv.flags.clipboard,
 				rawArgv
 			);
 		}

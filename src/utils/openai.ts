@@ -106,7 +106,8 @@ const sanitizeMessage = (message: string) =>
 	message
 		.trim()
 		.replace(/[\n\r]/g, '')
-		.replace(/(\w)\.$/, '$1');
+		.replace(/(\w)\.$/, '$1')
+		.replace(/^["'`]|["'`]$/g, ''); // Remove surrounding quotes
 
 const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
 

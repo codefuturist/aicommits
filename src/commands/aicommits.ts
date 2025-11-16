@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 import { black, dim, green, red, bgCyan } from 'kolorist';
+import clipboard from 'clipboardy';
 import {
 	intro,
 	outro,
@@ -26,6 +27,8 @@ export default async (
 	excludeFiles: string[],
 	stageAll: boolean,
 	commitType: string | undefined,
+	skipConfirm: boolean,
+	copyToClipboard: boolean,
 	rawArgv: string[]
 ) =>
 	(async () => {
@@ -105,31 +108,46 @@ export default async (
 		let message: string;
 		if (messages.length === 1) {
 			[message] = messages;
-			const confirmed = await confirm({
-				message: `Use this commit message?\n\n   ${message}\n`,
-			});
+			if (!skipConfirm) {
+				const confirmed = await confirm({
+					message: `Use this commit message?\n\n   ${message}\n`,
+				});
 
-			if (!confirmed || isCancel(confirmed)) {
-				outro('Commit cancelled');
-				return;
+				if (!confirmed || isCancel(confirmed)) {
+					outro('Commit cancelled');
+					return;
+				}
 			}
 		} else {
-			const selected = await select({
-				message: `Pick a commit message to use: ${dim('(Ctrl+c to exit)')}`,
-				options: messages.map((value) => ({ label: value, value })),
-			});
+			if (!skipConfirm) {
+				const selected = await select({
+					message: `Pick a commit message to use: ${dim('(Ctrl+c to exit)')}`,
+					options: messages.map((value) => ({ label: value, value })),
+				});
 
-			if (isCancel(selected)) {
-				outro('Commit cancelled');
-				return;
+				if (isCancel(selected)) {
+					outro('Commit cancelled');
+					return;
+				}
+
+				message = selected as string;
+			} else {
+				// If skipping confirmation, use the first message
+				message = messages[0];
 			}
-
-			message = selected as string;
 		}
 
-		await execa('git', ['commit', '-m', message, ...rawArgv]);
-
-		outro(`${green('✔')} Successfully committed!`);
+		if (copyToClipboard) {
+			try {
+				await clipboard.write(message);
+				outro(`${green('✔')} Message copied to clipboard`);
+			} catch (error: any) {
+				// Silently fail if clipboard is not available
+			}
+		} else {
+			await execa('git', ['commit', '-m', message, ...rawArgv]);
+			outro(`${green('✔')} Successfully committed!`);
+		}
 	})().catch((error) => {
 		outro(`${red('✖')} ${error.message}`);
 		handleCliError(error);
