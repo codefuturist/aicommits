@@ -1,7 +1,7 @@
 import { command } from 'cleye';
 import { select, text, outro, isCancel } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config.js';
-import { fetchModels } from './setup.js';
+import { selectModel } from '../feature/models/index.js';
 
 export default command(
 	{
@@ -70,116 +70,25 @@ export default command(
 				return;
 			}
 
-			// Fetch models
-			console.log('Fetching available models...');
-			const result = await fetchModels(baseUrl, apiKey);
-
-			if (result.error) {
-				console.error(`Failed to fetch models: ${result.error}`);
-			}
-
-			let selectedModel = '';
-
-			if (result.models.length > 0) {
-				// Preselect current model if it exists in the list
-				let modelOptions = result.models.slice(0, 10).map((model: string) => ({
-					label: model,
-					value: model,
-				}));
-
-				// Mark and move current model to the top if it exists
-				if (currentModel) {
-					const currentIndex = modelOptions.findIndex(
-						(opt: any) => opt.value === currentModel
-					);
-					if (currentIndex >= 0) {
-						// Mark as current and move to top
-						modelOptions[currentIndex].label += ' (current)';
-						if (currentIndex > 0) {
-							const [current] = modelOptions.splice(currentIndex, 1);
-							modelOptions.unshift(current);
-						}
-					} else {
-						// Current model not in fetched list, add it at the top
-						modelOptions.unshift({
-							label: `${currentModel} (current)`,
-							value: currentModel,
-						});
-					}
-				}
-
-				// For Together AI, also prefer the recommended model
-				if (config.provider === 'togetherai') {
-					const preferredModel = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
-					const preferredIndex = modelOptions.findIndex(
-						(opt) => opt.value === preferredModel
-					);
-					if (preferredIndex > 0) {
-						const [preferred] = modelOptions.splice(preferredIndex, 1);
-						modelOptions.unshift(preferred);
-					}
-				}
-
-				const modelChoice = await select({
-					message: 'Choose your model:',
-					options: [
-						...modelOptions,
-						{ label: 'Custom model name...', value: 'custom' },
-					],
-				});
-
-				if (isCancel(modelChoice)) {
-					outro('Model selection cancelled');
-					return;
-				}
-
-				if (modelChoice === 'custom') {
-					const customModel = await text({
-						message: 'Enter your custom model name:',
-						validate: (value) => {
-							if (!value) return 'Model name is required';
-							return;
-						},
-					});
-					if (isCancel(customModel)) {
-						outro('Model selection cancelled');
-						return;
-					}
-					selectedModel = customModel as string;
+			// Select model using shared function
+			try {
+				const selectedModel = await selectModel(baseUrl, apiKey, currentModel, config.provider);
+				// Save the selected model
+				const configs: [string, string][] = [];
+				if (config.provider === 'openai') {
+					configs.push(['openai-model', selectedModel]);
+				} else if (config.provider === 'togetherai') {
+					configs.push(['together-model', selectedModel]);
 				} else {
-					selectedModel = modelChoice as string;
+					configs.push(['model', selectedModel]);
 				}
-			} else {
-				// Fallback to manual input
-				console.log(
-					'Could not fetch available models. Please specify a model name manually.'
-				);
-				const model = await text({
-					message: 'Enter your model name:',
-					validate: (value) => {
-						if (!value) return 'Model name is required';
-						return;
-					},
-				});
-				if (isCancel(model)) {
-					outro('Model selection cancelled');
-					return;
-				}
-				selectedModel = model as string;
-			}
 
-			// Save the selected model
-			const configs: [string, string][] = [];
-			if (config.provider === 'openai') {
-				configs.push(['openai-model', selectedModel]);
-			} else if (config.provider === 'togetherai') {
-				configs.push(['together-model', selectedModel]);
-			} else {
-				configs.push(['model', selectedModel]);
+				await setConfigs(configs);
+				outro(`✅ Model updated to: ${selectedModel}`);
+			} catch (error) {
+				outro('Model selection cancelled');
+				return;
 			}
-
-			await setConfigs(configs);
-			outro(`✅ Model updated to: ${selectedModel}`);
 		})().catch((error) => {
 			console.error(`❌ Model selection failed: ${error.message}`);
 			process.exit(1);
