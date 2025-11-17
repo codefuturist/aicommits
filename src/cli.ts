@@ -4,6 +4,8 @@ const { description, version } = pkg;
 import aicommits from './commands/aicommits.js';
 import prepareCommitMessageHook from './commands/prepare-commit-msg-hook.js';
 import configCommand from './commands/config.js';
+import setupCommand from './commands/setup.js';
+import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 
 const rawArgv = process.argv.slice(2);
@@ -60,7 +62,7 @@ cli(
 			},
 		},
 
-		commands: [configCommand, hookCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand],
 
 		help: {
 			description,

@@ -18,7 +18,6 @@ import { getConfig, getProviderInfo } from '../utils/config.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCliError } from '../utils/error.js';
 import { fileExists } from '../utils/fs.js';
-import onboarding from '../utils/onboarding.js';
 import path from 'path';
 import os from 'os';
 
@@ -64,9 +63,19 @@ export default async (
 		intro(bgCyan(black(' aicommits ')));
 
 		const configPath = path.join(os.homedir(), '.aicommits');
+		const isInteractive = process.stdout.isTTY && !process.env.CI;
+
 		if (!(await fileExists(configPath))) {
-			const result = await onboarding();
-			if (!result) return;
+			if (isInteractive) {
+				console.log('Welcome to aicommits! Let\'s set up your AI provider.');
+				console.log('Run `aicommits setup` to configure your provider.');
+				outro('Setup required. Please run: aicommits setup');
+				return;
+			} else {
+				throw new KnownError(
+					'No configuration found. Run `aicommits setup` in an interactive terminal, or set environment variables (OPENAI_API_KEY, etc.)'
+				);
+			}
 		}
 
 		await assertGitRepo();
@@ -96,7 +105,9 @@ export default async (
 
 		const { env } = process;
 		const config = await getConfig({
-			OPENAI_KEY: env.OPENAI_KEY || env.OPENAI_API_KEY,
+			OPENAI_API_KEY: env.OPENAI_API_KEY || env.OPENAI_KEY,
+			'openai-base-url': env.OPENAI_BASE_URL,
+			'openai-model': env.OPENAI_MODEL,
 			proxy:
 				env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
 			generate: generate?.toString(),
@@ -105,8 +116,17 @@ export default async (
 
 		const { hostname, apiKey, provider } = getProviderInfo(config);
 
-		// Use provider-specific model
-		config.model = provider === 'openai' ? config['openai-model'] : config['together-model'];
+		// Model selection priority: env var > provider-specific > default
+		if (config['openai-model'] && (provider === 'openai' || provider === 'openai-compatible')) {
+			config.model = config['openai-model'];
+		} else if (provider === 'openai') {
+			config.model = config['openai-model'];
+		} else if (provider === 'togetherai') {
+			config.model = config['together-model'];
+		} else {
+			// For custom/ollama, use the general model setting
+			config.model = config.model;
+		}
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');

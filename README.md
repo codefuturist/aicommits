@@ -20,17 +20,47 @@
    npm install -g aicommits
    ```
 
-2. Retrieve your API key from [TogetherAI](https://api.together.ai/)
-
-   > Note: If you haven't already, you'll have to create an account and get your API key.
-
-3. Set the key so aicommits can use it:
+2. Run the setup command to choose your AI provider:
 
    ```sh
-   aicommits config set TOGETHER_API_KEY=<your token>
+   aicommits setup
    ```
 
-   > If you have an OpenAI key set, it will use OpenAI automatically. Otherwise, it defaults to TogetherAI.
+This will guide you through:
+- Selecting your AI provider (sets the `provider` config)
+- Configuring your API key
+- **Automatically fetching and selecting from available models** (when supported)
+
+   Supported providers include:
+   - **TogetherAI** (recommended) - Get your API key from [TogetherAI](https://api.together.ai/)
+   - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
+   - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
+   - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
+
+   Alternatively, you can use environment variables (recommended for CI/CD):
+
+   ```bash
+   export OPENAI_API_KEY="your_api_key_here"
+   export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
+   export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
+   ```
+
+   Or configure manually:
+
+   ```sh
+   # For TogetherAI
+   aicommits config set TOGETHER_API_KEY=<your token>
+
+# For OpenAI
+aicommits config set OPENAI_API_KEY=<your token>
+
+   # For Ollama (local)
+   aicommits config set endpoint=http://localhost:11434
+
+   # For custom endpoint
+   aicommits config set endpoint=https://your-api-endpoint.com
+   aicommits config set api-key=<your-api-key>
+   ```
 
    This will create a `.aicommits` file in your home directory.
 
@@ -135,6 +165,30 @@ aicommits hook uninstall
 
 ## Configuration
 
+### Viewing current configuration
+
+To view all current configuration options that differ from defaults, run:
+
+```sh
+aicommits config
+```
+
+This will display only non-default configuration values with API keys masked for security. If no custom configuration is set, it will show "(using all default values)".
+
+### Changing your model
+
+To interactively select or change your AI model, run:
+
+```sh
+aicommits model
+```
+
+This will:
+- Show your current provider and model
+- Fetch available models from your provider's API
+- Let you select from available models or enter a custom model name
+- Update your configuration automatically
+
 ### Reading a configuration value
 
 To retrieve a configuration option, use the command:
@@ -146,13 +200,13 @@ aicommits config get <key>
 For example, to retrieve the API key, you can use:
 
 ```sh
-aicommits config get OPENAI_KEY
+aicommits config get OPENAI_API_KEY
 ```
 
 You can also retrieve multiple configuration options at once by separating them with spaces:
 
 ```sh
-aicommits config get OPENAI_KEY generate
+aicommits config get OPENAI_API_KEY generate
 ```
 
 ### Setting a configuration value
@@ -166,7 +220,15 @@ aicommits config set <key>=<value>
 For example, to set the API key, you can use:
 
 ```sh
-aicommits config set OPENAI_KEY=<your-api-key>
+aicommits config set OPENAI_API_KEY=<your-api-key>
+```
+
+You can also set multiple configuration options at once by separating them with spaces, like
+
+```sh
+aicommits config set OPENAI_API_KEY=<your-api-key> generate=3 locale=en
+# or for a custom endpoint
+aicommits config set endpoint=https://api.example.com api-key=<your-key> model=gpt-4
 ```
 
 You can also set multiple configuration options at once by separating them with spaces, like
@@ -181,9 +243,51 @@ aicommits config set OPENAI_KEY=<your-api-key> generate=3 locale=en
 
 The TogetherAI API key. You can retrieve it from [TogetherAI](https://api.together.ai/).
 
-#### OPENAI_KEY
+#### OPENAI_API_KEY
 
 The OpenAI API key. You can retrieve it from [OpenAI API Keys page](https://platform.openai.com/account/api-keys).
+
+#### api-key
+
+A generic API key for custom endpoints or local providers like Ollama. No specific format validation is applied.
+
+#### endpoint
+
+A custom OpenAI-compatible API endpoint URL. When set, this takes precedence over the default OpenAI and TogetherAI endpoints. Must be a valid HTTP/HTTPS URL.
+
+#### openai-base-url
+
+Environment variable alternative to `endpoint`. Used when `OPENAI_BASE_URL` environment variable is set.
+
+#### provider
+
+The selected AI provider. Set automatically during `aicommits setup`. Valid values: `openai`, `togetherai`, `ollama`, `custom`.
+
+### Environment Variables
+
+You can also configure aicommits using environment variables instead of the config file:
+
+#### OPENAI_API_KEY
+
+Your OpenAI API key. Alternative to setting `OPENAI_API_KEY` in config.
+
+#### OPENAI_BASE_URL
+
+Custom OpenAI-compatible API endpoint URL. Alternative to setting `endpoint` in config.
+
+#### OPENAI_MODEL
+
+Model to use for OpenAI-compatible providers. Alternative to setting `openai-model` in config.
+
+**Example:**
+```bash
+export OPENAI_API_KEY="sk-..."
+export OPENAI_BASE_URL="https://api.example.com"
+export OPENAI_MODEL="gpt-4"
+aicommits  # Uses environment variables
+```
+
+Environment variables take precedence over config file settings.
 
 #### locale
 
@@ -213,7 +317,7 @@ aicommits config set proxy=
 
 Default: `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo`
 
-The Chat Completions (`/v1/chat/completions`) model to use. For TogetherAI, see [TogetherAI models](https://docs.together.ai/docs/inference-models). For OpenAI, see [OpenAI models](https://platform.openai.com/docs/models/model-endpoint-compatibility).
+The Chat Completions (`/v1/chat/completions`) model to use. During `aicommits setup`, you'll be able to choose from available models if your provider supports the `/models` endpoint. For TogetherAI, see [TogetherAI models](https://docs.together.ai/docs/inference-models). For OpenAI, see [OpenAI models](https://platform.openai.com/docs/models/model-endpoint-compatibility). For custom endpoints, use the model name supported by your provider.
 
 #### timeout
 
