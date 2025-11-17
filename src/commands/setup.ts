@@ -7,7 +7,7 @@ import {
 	outro,
 	isCancel,
 } from '@clack/prompts';
-import { setConfigs } from '../utils/config.js';
+import { getConfig, setConfigs } from '../utils/config.js';
 import { selectModel } from '../feature/models/index.js';
 import { openWebUrl } from '../utils/web.js';
 
@@ -21,8 +21,8 @@ export default command(
 			const provider = await select({
 				message: 'Choose your AI provider:',
 				options: [
+					{ label: 'Together AI (recommended)', value: 'togetherai' },
 					{ label: 'OpenAI', value: 'openai' },
-					{ label: 'Together AI', value: 'togetherai' },
 					{ label: 'Ollama (local)', value: 'ollama' },
 					{ label: 'Custom OpenAI-compatible', value: 'custom' },
 				],
@@ -40,97 +40,209 @@ export default command(
 			configs.push(['provider', provider]);
 
 			if (provider === 'openai') {
-				const hasKey = await confirm({
-					message: 'Do you have an OpenAI API key?',
-				});
+				// Check if API key is already configured
+				const existingConfig = await getConfig();
+				const existingKey = existingConfig.OPENAI_API_KEY;
 
-				if (isCancel(hasKey)) {
-					outro('Setup cancelled');
-					return;
-				}
+				let key: string;
 
-				if (hasKey) {
-					const key = await password({
-						message: 'Enter your OpenAI API key:',
-						validate: (value) => {
-							if (!value) return 'API key is required';
-							if (!value.startsWith('sk-'))
-								return 'OpenAI key must start with "sk-"';
-							return;
-						},
+				if (existingKey) {
+					const useExisting = await confirm({
+						message: `Found existing OpenAI API key. Use it?`,
 					});
 
-					if (isCancel(key)) {
+					if (isCancel(useExisting)) {
 						outro('Setup cancelled');
 						return;
 					}
 
-					configs.push(['OPENAI_API_KEY', key as string]);
+					if (useExisting) {
+						key = existingKey;
+					} else {
+						const newKey = await password({
+							message: 'Enter your new OpenAI API key:',
+							validate: (value) => {
+								if (!value) return 'API key is required';
+								if (!value.startsWith('sk-'))
+									return 'OpenAI key must start with "sk-"';
+								return;
+							},
+						});
 
-					// Select model using shared function
-					try {
-						selectedModel = await selectModel(
-							'https://api.openai.com',
-							key as string,
-							undefined,
-							'openai'
-						);
-					} catch (error) {
-						outro('Setup cancelled');
-						return;
+						if (isCancel(newKey)) {
+							outro('Setup cancelled');
+							return;
+						}
+
+						key = newKey as string;
 					}
 				} else {
-					console.log(
-						'Get your API key from: https://platform.openai.com/account/api-keys'
+					const hasKey = await confirm({
+						message: 'Do you have an OpenAI API key?',
+					});
+
+					if (isCancel(hasKey)) {
+						outro('Setup cancelled');
+						return;
+					}
+
+					if (hasKey) {
+						const newKey = await password({
+							message: 'Enter your OpenAI API key:',
+							validate: (value) => {
+								if (!value) return 'API key is required';
+								if (!value.startsWith('sk-'))
+									return 'OpenAI key must start with "sk-"';
+								return;
+							},
+						});
+
+						if (isCancel(newKey)) {
+							outro('Setup cancelled');
+							return;
+						}
+
+						key = newKey as string;
+					} else {
+						console.log(
+							'Get your API key from: https://platform.openai.com/account/api-keys'
+						);
+						openWebUrl('https://platform.openai.com/account/api-keys');
+
+						// After opening website, prompt for API key
+						const apiKey = await password({
+							message: 'Enter your OpenAI API key (after getting it from the website):',
+							validate: (value) => {
+								if (!value) return 'API key is required';
+								if (!value.startsWith('sk-'))
+									return 'OpenAI key must start with "sk-"';
+								return;
+							},
+						});
+
+						if (isCancel(apiKey)) {
+							outro('Setup cancelled');
+							return;
+						}
+
+						key = apiKey as string;
+					}
+				}
+
+				configs.push(['OPENAI_API_KEY', key]);
+
+				// Select model using shared function
+				try {
+					selectedModel = await selectModel(
+						'https://api.openai.com',
+						key,
+						undefined,
+						'openai'
 					);
-					openWebUrl('https://platform.openai.com/account/api-keys');
-					outro('Setup cancelled - please run setup again with your API key');
+				} catch (error) {
+					outro('Setup cancelled');
 					return;
 				}
 			} else if (provider === 'togetherai') {
-				const hasKey = await confirm({
-					message: 'Do you have a Together AI API key?',
-				});
+				// Check if API key is already configured
+				const existingConfig = await getConfig();
+				const existingKey = existingConfig.TOGETHER_API_KEY;
 
-				if (isCancel(hasKey)) {
-					outro('Setup cancelled');
-					return;
-				}
+				let key: string;
 
-				if (hasKey) {
-					const key = await password({
-						message: 'Enter your Together AI API key:',
-						validate: (value) => {
-							if (!value) return 'API key is required';
-							if (!value.startsWith('tgp_'))
-								return 'Together AI key must start with "tgp_"';
-							return;
-						},
+				if (existingKey) {
+					const useExisting = await confirm({
+						message: `Found existing Together AI API key. Use it?`,
 					});
 
-					if (isCancel(key)) {
+					if (isCancel(useExisting)) {
 						outro('Setup cancelled');
 						return;
 					}
 
-					configs.push(['TOGETHER_API_KEY', key as string]);
+					if (useExisting) {
+						key = existingKey;
+					} else {
+						const newKey = await password({
+							message: 'Enter your new Together AI API key:',
+							validate: (value) => {
+								if (!value) return 'API key is required';
+								if (!value.startsWith('tgp_'))
+									return 'Together AI key must start with "tgp_"';
+								return;
+							},
+						});
 
-					// Select model using shared function
-					try {
-						selectedModel = await selectModel(
-							'https://api.together.xyz',
-							key as string,
-							undefined,
-							'togetherai'
-						);
-					} catch (error) {
-						outro('Setup cancelled');
-						return;
+						if (isCancel(newKey)) {
+							outro('Setup cancelled');
+							return;
+						}
+
+						key = newKey as string;
 					}
 				} else {
-					console.log('Get your API key from: https://api.together.ai/');
-					openWebUrl('https://api.together.ai/');
-					outro('Setup cancelled - please run setup again with your API key');
+					const hasKey = await confirm({
+						message: 'Do you have a Together AI API key?',
+					});
+
+					if (isCancel(hasKey)) {
+						outro('Setup cancelled');
+						return;
+					}
+
+					if (hasKey) {
+						const newKey = await password({
+							message: 'Enter your Together AI API key:',
+							validate: (value) => {
+								if (!value) return 'API key is required';
+								if (!value.startsWith('tgp_'))
+									return 'Together AI key must start with "tgp_"';
+								return;
+							},
+						});
+
+						if (isCancel(newKey)) {
+							outro('Setup cancelled');
+							return;
+						}
+
+						key = newKey as string;
+					} else {
+						console.log('Get your API key from: https://api.together.ai/');
+						openWebUrl('https://api.together.ai/');
+
+						// After opening website, prompt for API key
+						const apiKey = await password({
+							message: 'Enter your Together AI API key (after getting it from the website):',
+							validate: (value) => {
+								if (!value) return 'API key is required';
+								if (!value.startsWith('tgp_'))
+									return 'Together AI key must start with "tgp_"';
+								return;
+							},
+						});
+
+						if (isCancel(apiKey)) {
+							outro('Setup cancelled');
+							return;
+						}
+
+						key = apiKey as string;
+					}
+				}
+
+				configs.push(['TOGETHER_API_KEY', key]);
+
+				// Select model using shared function
+				try {
+					selectedModel = await selectModel(
+						'https://api.together.xyz',
+						key as string,
+						undefined,
+						'togetherai'
+					);
+				} catch (error) {
+					outro('Setup cancelled');
 					return;
 				}
 			} else if (provider === 'ollama') {

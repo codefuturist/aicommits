@@ -7,27 +7,31 @@ export const filterModels = (modelsArray: any[], baseUrl: string): string[] => {
 	// Vendor-specific filtering
 	if (baseUrl.includes('api.openai.com')) {
 		// OpenAI: Prioritize GPT, O-series models
-		const prioritized = filtered.filter((model: any) =>
-			model.id.includes('gpt') ||
-			model.id.includes('o1') ||
-			model.id.includes('o3') ||
-			model.id.includes('o4') ||
-			model.id.includes('o5') ||
-			(!model.type || model.type === 'chat')
+		const prioritized = filtered.filter(
+			(model: any) =>
+				model.id.includes('gpt') ||
+				model.id.includes('o1') ||
+				model.id.includes('o3') ||
+				model.id.includes('o4') ||
+				model.id.includes('o5') ||
+				!model.type ||
+				model.type === 'chat'
 		);
 		// If prioritized list is empty, fall back to all models
 		filtered = prioritized.length > 0 ? prioritized : filtered;
 	} else if (baseUrl.includes('api.together.xyz')) {
 		// Together AI: Filter by type if available, otherwise include all
-		const typeFiltered = filtered.filter((model: any) =>
-			!model.type || model.type === 'chat' || model.type === 'language'
+		const typeFiltered = filtered.filter(
+			(model: any) =>
+				!model.type || model.type === 'chat' || model.type === 'language'
 		);
 		// If type filtering removes all models, fall back to all models
 		filtered = typeFiltered.length > 0 ? typeFiltered : filtered;
 	} else {
 		// Custom endpoints: Basic filtering
-		const typeFiltered = filtered.filter((model: any) =>
-			!model.type || model.type === 'chat' || model.type === 'language'
+		const typeFiltered = filtered.filter(
+			(model: any) =>
+				!model.type || model.type === 'chat' || model.type === 'language'
 		);
 		// If type filtering removes all models, fall back to all models
 		filtered = typeFiltered.length > 0 ? typeFiltered : filtered;
@@ -92,12 +96,14 @@ export const selectModel = async (
 		// Prepare model options
 		let modelOptions = result.models.slice(0, 10).map((model: string) => ({
 			label: model,
-			value: model
+			value: model,
 		}));
 
 		// Move current model to the top if it exists
 		if (currentModel) {
-			const currentIndex = modelOptions.findIndex((opt: any) => opt.value === currentModel);
+			const currentIndex = modelOptions.findIndex(
+				(opt: any) => opt.value === currentModel
+			);
 			if (currentIndex >= 0) {
 				// Mark as current and move to top
 				modelOptions[currentIndex].label += ' (current)';
@@ -109,7 +115,7 @@ export const selectModel = async (
 				// Current model not in fetched list, add it at the top
 				modelOptions.unshift({
 					label: `${currentModel} (current)`,
-					value: currentModel
+					value: currentModel,
 				});
 			}
 		}
@@ -117,7 +123,9 @@ export const selectModel = async (
 		// For Together AI, also prefer the recommended model
 		if (provider === 'togetherai') {
 			const preferredModel = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
-			const preferredIndex = modelOptions.findIndex((opt: any) => opt.value === preferredModel);
+			const preferredIndex = modelOptions.findIndex(
+				(opt) => opt.value === preferredModel
+			);
 			if (preferredIndex > 0) {
 				const [preferred] = modelOptions.splice(preferredIndex, 1);
 				modelOptions.unshift(preferred);
@@ -130,7 +138,7 @@ export const selectModel = async (
 			message: 'Choose your model:',
 			options: [
 				...modelOptions,
-				{ label: 'Custom model name...', value: 'custom' }
+				{ label: 'Custom model name...', value: 'custom' },
 			],
 		});
 
@@ -148,7 +156,9 @@ export const selectModel = async (
 		}
 	} else {
 		// Fallback to manual input
-		console.log('Could not fetch available models. Please specify a model name manually.');
+		console.log(
+			'Could not fetch available models. Please specify a model name manually.'
+		);
 		const { text } = await import('@clack/prompts');
 		const model = await text({
 			message: 'Enter your model name:',
