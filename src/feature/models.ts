@@ -1,28 +1,44 @@
 // Model filtering, fetching, and selection utilities
 
+interface ModelObject {
+	id?: string;
+	name?: string;
+	type?: string;
+}
+
 // Filter models based on vendor-specific logic
-export const filterModels = (modelsArray: any[], baseUrl: string): string[] => {
-	let filtered = modelsArray.filter((model: any) => model.id);
+export const filterModels = (
+	modelsArray: ModelObject[],
+	baseUrl: string,
+	provider?: string
+): string[] => {
+	let filtered: ModelObject[];
+	if (provider === 'ollama') {
+		filtered = modelsArray.filter((model) => model.name);
+	} else {
+		filtered = modelsArray.filter((model) => model.id);
+	}
 
 	// Vendor-specific filtering
 	if (baseUrl.includes('api.openai.com')) {
 		// OpenAI: Prioritize GPT, O-series models
 		const prioritized = filtered.filter(
-			(model: any) =>
-				model.id.includes('gpt') ||
-				model.id.includes('o1') ||
-				model.id.includes('o3') ||
-				model.id.includes('o4') ||
-				model.id.includes('o5') ||
-				!model.type ||
-				model.type === 'chat'
+			(model) =>
+				model.id &&
+				(model.id.includes('gpt') ||
+					model.id.includes('o1') ||
+					model.id.includes('o3') ||
+					model.id.includes('o4') ||
+					model.id.includes('o5') ||
+					!model.type ||
+					model.type === 'chat')
 		);
 		// If prioritized list is empty, fall back to all models
 		filtered = prioritized.length > 0 ? prioritized : filtered;
 	} else if (baseUrl.includes('api.together.xyz')) {
 		// Together AI: Filter by type if available, otherwise include all
 		const typeFiltered = filtered.filter(
-			(model: any) =>
+			(model) =>
 				!model.type || model.type === 'chat' || model.type === 'language'
 		);
 		// If type filtering removes all models, fall back to all models
@@ -30,7 +46,7 @@ export const filterModels = (modelsArray: any[], baseUrl: string): string[] => {
 	} else {
 		// Custom endpoints: Basic filtering
 		const typeFiltered = filtered.filter(
-			(model: any) =>
+			(model) =>
 				!model.type || model.type === 'chat' || model.type === 'language'
 		);
 		// If type filtering removes all models, fall back to all models
@@ -39,25 +55,41 @@ export const filterModels = (modelsArray: any[], baseUrl: string): string[] => {
 
 	// Final fallback: if filtering results in empty array, return original models
 	if (filtered.length === 0) {
-		filtered = modelsArray.filter((model: any) => model.id);
+		if (provider === 'ollama') {
+			filtered = modelsArray.filter((model) => model.name);
+		} else {
+			filtered = modelsArray.filter((model) => model.id);
+		}
 	}
 
-	return filtered.map((model: any) => model.id).slice(0, 20);
+	if (provider === 'ollama') {
+		return filtered.map((model) => model.name!).slice(0, 20);
+	} else {
+		return filtered.map((model) => model.id!).slice(0, 20);
+	}
 };
 
 // Fetch models from API
 export const fetchModels = async (
 	baseUrl: string,
-	apiKey: string
+	apiKey: string,
+	provider?: string
 ): Promise<{ models: string[]; error?: string }> => {
 	try {
-		const modelsUrl = `${baseUrl.replace(/\/$/, '')}/v1/models`;
+		let modelsUrl: string;
+		let headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		};
+
+		if (provider === 'ollama') {
+			modelsUrl = `${baseUrl.replace(/\/$/, '')}/api/tags`;
+		} else {
+			modelsUrl = `${baseUrl.replace(/\/$/, '')}/v1/models`;
+			headers.Authorization = `Bearer ${apiKey}`;
+		}
 
 		const response = await fetch(modelsUrl, {
-			headers: {
-				Authorization: `Bearer ${apiKey}`,
-				'Content-Type': 'application/json',
-			},
+			headers,
 			signal: AbortSignal.timeout(5000),
 		});
 
@@ -66,12 +98,19 @@ export const fetchModels = async (
 		}
 
 		const data = await response.json();
-		const modelsArray = Array.isArray(data) ? data : data.data || [];
-		const models = filterModels(modelsArray, baseUrl);
+		let modelsArray: ModelObject[];
+		if (provider === 'ollama') {
+			modelsArray = data.models || [];
+		} else {
+			modelsArray = Array.isArray(data) ? data : data.data || [];
+		}
+		const models = filterModels(modelsArray, baseUrl, provider);
 
 		return { models };
-	} catch (error: any) {
-		return { models: [], error: error.message || 'Request failed' };
+	} catch (error: unknown) {
+		const errorMessage =
+			error instanceof Error ? error.message : 'Request failed';
+		return { models: [], error: errorMessage };
 	}
 };
 
@@ -84,7 +123,7 @@ export const selectModel = async (
 ): Promise<string> => {
 	// Fetch models
 	console.log('Fetching available models...');
-	const result = await fetchModels(baseUrl, apiKey);
+	const result = await fetchModels(baseUrl, apiKey, provider);
 
 	if (result.error) {
 		console.error(`Failed to fetch models: ${result.error}`);
@@ -102,7 +141,7 @@ export const selectModel = async (
 		// Move current model to the top if it exists
 		if (currentModel) {
 			const currentIndex = modelOptions.findIndex(
-				(opt: any) => opt.value === currentModel
+				(opt) => opt.value === currentModel
 			);
 			if (currentIndex >= 0) {
 				// Mark as current and move to top

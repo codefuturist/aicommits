@@ -111,23 +111,6 @@ const sanitizeMessage = (message: string) =>
 
 const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
 
-// const generateStringFromLength = (length: number) => {
-// 	let result = '';
-// 	const highestTokenChar = 'z';
-// 	for (let i = 0; i < length; i += 1) {
-// 		result += highestTokenChar;
-// 	}
-// 	return result;
-// };
-
-// const getTokens = (prompt: string, model: TiktokenModel) => {
-// 	const encoder = encoding_for_model(model);
-// 	const tokens = encoder.encode(prompt).length;
-// 	// Free the encoder to avoid possible memory leaks.
-// 	encoder.free();
-// 	return tokens;
-// };
-
 export const generateCommitMessage = async (
 	hostname: string,
 	apiKey: string,

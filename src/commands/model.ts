@@ -1,7 +1,8 @@
 import { command } from 'cleye';
-import { select, text, outro, isCancel } from '@clack/prompts';
+import { outro } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config.js';
-import { selectModel } from '../feature/models/index.js';
+import { getProvider } from '../feature/providers/index.js';
+import { selectModel } from '../feature/models.js';
 
 export default command(
 	{
@@ -17,7 +18,15 @@ export default command(
 				return;
 			}
 
-			console.log(`Current provider: ${config.provider}`);
+			const provider = getProvider(config);
+			if (!provider) {
+				outro(
+					'Invalid provider configured. Run `aicommits setup` to reconfigure.'
+				);
+				return;
+			}
+
+			console.log(`Current provider: ${provider.displayName}`);
 
 			// Show current model based on provider
 			let currentModel = '';
@@ -30,49 +39,26 @@ export default command(
 			}
 			console.log(`Current model: ${currentModel || 'not set'}`);
 
-			// Fetch available models for the current provider
-			let baseUrl = '';
-			if (config.provider === 'openai') {
-				baseUrl = config['openai-base-url'] || 'https://api.openai.com';
-			} else if (config.provider === 'togetherai') {
-				baseUrl = 'https://api.together.xyz';
-			} else if (config.provider === 'custom') {
-				if (!config.endpoint) {
-					outro(
-						'Custom provider requires endpoint. Run `aicommits setup` to configure.'
-					);
-					return;
-				}
-				baseUrl = config.endpoint;
-			} else if (config.provider === 'ollama') {
-				baseUrl = config.endpoint || 'http://localhost:11434';
-			}
-
-			if (!baseUrl) {
-				outro('Unable to determine API endpoint for current provider.');
-				return;
-			}
-
-			// Get API key
-			let apiKey = '';
-			if (config.provider === 'openai') {
-				apiKey = config.OPENAI_API_KEY || '';
-			} else if (config.provider === 'togetherai') {
-				apiKey = config.TOGETHER_API_KEY || '';
-			} else {
-				apiKey = config['api-key'] || '';
-			}
-
-			if (!apiKey && config.provider !== 'ollama') {
+			// Validate provider config
+			const validation = provider.validateConfig();
+			if (!validation.valid) {
 				outro(
-					'API key required for this provider. Run `aicommits setup` to configure.'
+					`Configuration issues: ${validation.errors.join(
+						', '
+					)}. Run \`aicommits setup\` to reconfigure.`
 				);
 				return;
 			}
 
-			// Select model using shared function
+			// Select model using provider
 			try {
-				const selectedModel = await selectModel(baseUrl, apiKey, currentModel, config.provider);
+				const selectedModel = await selectModel(
+					provider.getBaseUrl(),
+					provider.getApiKey() || '',
+					currentModel,
+					provider.name
+				);
+
 				// Save the selected model
 				const configs: [string, string][] = [];
 				if (config.provider === 'openai') {

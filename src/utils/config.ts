@@ -13,7 +13,7 @@ const { hasOwnProperty } = Object.prototype;
 export const hasOwn = (object: unknown, key: PropertyKey) =>
 	hasOwnProperty.call(object, key);
 
-const parseAssert = (name: string, condition: any, message: string) => {
+const parseAssert = (name: string, condition: boolean, message: string) => {
 	if (!condition) {
 		throw new KnownError(`Invalid config property ${name}: ${message}`);
 	}
@@ -61,7 +61,7 @@ const configParsers = {
 			return 'en';
 		}
 
-		parseAssert('locale', locale, 'Cannot be empty');
+		parseAssert('locale', !!locale, 'Cannot be empty');
 		parseAssert(
 			'locale',
 			/^[a-z-]+$/i.test(locale),

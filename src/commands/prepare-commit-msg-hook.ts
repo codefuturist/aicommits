@@ -2,7 +2,8 @@ import fs from 'fs/promises';
 import { intro, outro, spinner } from '@clack/prompts';
 import { black, green, red, bgCyan } from 'kolorist';
 import { getStagedDiff } from '../utils/git.js';
-import { getConfig, getProviderInfo } from '../utils/config.js';
+import { getConfig } from '../utils/config.js';
+import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCliError } from '../utils/error.js';
 
@@ -35,7 +36,19 @@ export default () =>
 				env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
 		});
 
-		const { hostname, apiKey } = getProviderInfo(config);
+		const providerInstance = getProvider(config);
+		if (!providerInstance) {
+			throw new KnownError('Invalid provider configuration. Run `aicommits setup` to reconfigure.');
+		}
+
+		// Validate provider config
+		const validation = providerInstance.validateConfig();
+		if (!validation.valid) {
+			throw new KnownError(`Provider configuration issues: ${validation.errors.join(', ')}. Run \`aicommits setup\` to reconfigure.`);
+		}
+
+		const hostname = providerInstance.getBaseUrl().replace(/^https?:\/\//, '');
+		const apiKey = providerInstance.getApiKey() || '';
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
