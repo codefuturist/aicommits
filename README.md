@@ -47,8 +47,6 @@ This will guide you through:
   export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
   ```
 
-
-
 This will create a `.aicommits` file in your home directory.
 
 ### Upgrading
@@ -59,13 +57,13 @@ Check the installed version with:
 
 aicommits --version
 
-````
+```
 
 If it's not the [latest version](https://github.com/Nutlope/aicommits/releases/latest), run:
 
 ```sh
 npm update -g aicommits
-````
+```
 
 ## Usage
 
@@ -152,6 +150,21 @@ aicommits hook uninstall
 
 3. Save and close the editor to commit!
 
+### Environment Variables
+
+You can also configure aicommits using environment variables instead of the config file.
+
+**Example:**
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export OPENAI_BASE_URL="https://api.example.com"
+export OPENAI_MODEL="gpt-4"
+aicommits  # Uses environment variables
+```
+
+Environment variables take precedence over config file settings.
+
 ## Configuration
 
 ### Viewing current configuration
@@ -217,68 +230,25 @@ You can also set multiple configuration options at once by separating them with 
 
 ```sh
 aicommits config set OPENAI_API_KEY=<your-api-key> generate=3 locale=en
-# or for a custom endpoint
-aicommits config set endpoint=https://api.example.com api-key=<your-key> model=gpt-4
 ```
 
-You can also set multiple configuration options at once by separating them with spaces, like
-
-```sh
-aicommits config set OPENAI_KEY=<your-api-key> generate=3 locale=en
-```
-
-### Options
-
-#### TOGETHER_API_KEY
-
-The TogetherAI API key. You can retrieve it from [TogetherAI](https://api.together.ai/).
+### Config Options
 
 #### OPENAI_API_KEY
 
-The OpenAI API key. You can retrieve it from [OpenAI API Keys page](https://platform.openai.com/account/api-keys).
+Your OpenAI API key or custom provider API Key
 
-#### api-key
+#### OPENAI_BASE_URL
 
-A generic API key for custom endpoints or local providers like Ollama. No specific format validation is applied.
+Custom OpenAI-compatible API endpoint URL.
 
-#### endpoint
+#### OPENAI_MODEL
 
-A custom OpenAI-compatible API endpoint URL. When set, this takes precedence over the default OpenAI and TogetherAI endpoints. Must be a valid HTTP/HTTPS URL.
-
-#### openai-base-url
-
-Environment variable alternative to `endpoint`. Used when `OPENAI_BASE_URL` environment variable is set.
+Model to use for OpenAI-compatible providers.
 
 #### provider
 
 The selected AI provider. Set automatically during `aicommits setup`. Valid values: `openai`, `togetherai`, `ollama`, `custom`.
-
-### Environment Variables
-
-You can also configure aicommits using environment variables instead of the config file:
-
-#### OPENAI_API_KEY
-
-Your OpenAI API key. Alternative to setting `OPENAI_API_KEY` in config.
-
-#### OPENAI_BASE_URL
-
-Custom OpenAI-compatible API endpoint URL. Alternative to setting `endpoint` in config.
-
-#### OPENAI_MODEL
-
-Model to use for OpenAI-compatible providers. Alternative to setting `openai-model` in config.
-
-**Example:**
-
-```bash
-export OPENAI_API_KEY="sk-..."
-export OPENAI_BASE_URL="https://api.example.com"
-export OPENAI_MODEL="gpt-4"
-aicommits  # Uses environment variables
-```
-
-Environment variables take precedence over config file settings.
 
 #### locale
 
