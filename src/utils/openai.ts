@@ -1,105 +1,45 @@
-import https from 'https';
-import type { ClientRequest, IncomingMessage } from 'http';
 import type {
 	ChatCompletionCreateParams,
 	ChatCompletion,
 } from 'openai/resources/chat/completions';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { KnownError } from './error.js';
 import type { CommitType } from './config.js';
 import { generatePrompt } from './prompt.js';
 
-const httpsPost = async (
-	hostname: string,
-	path: string,
-	headers: Record<string, string>,
-	json: unknown,
-	timeout: number,
-	proxy?: string
-) =>
-	new Promise<{
-		request: ClientRequest;
-		response: IncomingMessage;
-		data: string;
-	}>((resolve, reject) => {
-		const postContent = JSON.stringify(json);
-		const request = https.request(
-			{
-				port: 443,
-				hostname,
-				path,
-				method: 'POST',
-				headers: {
-					...headers,
-					'Content-Type': 'application/json',
-					'Content-Length': String(Buffer.byteLength(postContent)),
-				},
-				timeout,
-				agent: proxy ? (new HttpsProxyAgent(proxy) as any) : undefined,
-			},
-			(response) => {
-				const body: Buffer[] = [];
-				response.on('data', (chunk) => body.push(chunk));
-				response.on('end', () => {
-					resolve({
-						request,
-						response,
-						data: Buffer.concat(body).toString(),
-					});
-				});
-			}
-		);
-		request.on('error', reject);
-		request.on('timeout', () => {
-			request.destroy();
-			reject(
-				new KnownError(
-					`Time out error: request took over ${timeout}ms. Try increasing the \`timeout\` config, or checking the OpenAI API status https://status.openai.com`
-				)
-			);
-		});
-
-		request.write(postContent);
-		request.end();
-	});
-
 const createChatCompletion = async (
-	hostname: string,
+	baseUrl: string,
 	apiKey: string,
 	json: ChatCompletionCreateParams,
-	timeout: number,
-	proxy?: string
+	timeout: number
 ) => {
-	const { response, data } = await httpsPost(
-		hostname,
-		'/v1/chat/completions',
-		{
+	const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
 			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
 		},
-		json,
-		timeout,
-		proxy
-	);
+		body: JSON.stringify(json),
+		signal: AbortSignal.timeout(timeout),
+	});
 
-	if (
-		!response.statusCode ||
-		response.statusCode < 200 ||
-		response.statusCode > 299
-	) {
-		let errorMessage = `OpenAI API Error: ${response.statusCode} - ${response.statusMessage}`;
+	if (!response.ok) {
+		let errorMessage = `API Error: ${response.status} - ${response.statusText}`;
 
+		const data = await response.text();
 		if (data) {
 			errorMessage += `\n\n${data}`;
 		}
 
-		if (response.statusCode === 500) {
+		if (response.status === 500) {
 			errorMessage += '\n\nCheck the API status: https://status.openai.com';
 		}
 
 		throw new KnownError(errorMessage);
 	}
 
-	return JSON.parse(data) as ChatCompletion;
+	const data = await response.json();
+	return data as ChatCompletion;
 };
 
 const sanitizeMessage = (message: string) =>
@@ -112,7 +52,7 @@ const sanitizeMessage = (message: string) =>
 const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
 
 export const generateCommitMessage = async (
-	hostname: string,
+	baseUrl: string,
 	apiKey: string,
 	model: string,
 	locale: string,
@@ -120,8 +60,7 @@ export const generateCommitMessage = async (
 	completions: number,
 	maxLength: number,
 	type: CommitType,
-	timeout: number,
-	proxy?: string
+	timeout: number
 ) => {
 	if (process.env.DEBUG) {
 		console.log('Diff being sent to AI:');
@@ -129,7 +68,7 @@ export const generateCommitMessage = async (
 	}
 	try {
 		const completion = await createChatCompletion(
-			hostname,
+			baseUrl,
 			apiKey,
 			{
 				model,
@@ -151,8 +90,7 @@ export const generateCommitMessage = async (
 				stream: false,
 				n: completions,
 			},
-			timeout,
-			proxy
+			timeout
 		);
 
 		const validChoices = completion.choices.filter(

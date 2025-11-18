@@ -18,11 +18,11 @@ import { getConfig } from '../utils/config.js';
 import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCliError } from '../utils/error.js';
-import { fileExists } from '../utils/fs.js';
-import path from 'path';
-import os from 'os';
 
-const getCommitMessage = async (messages: string[], skipConfirm: boolean): Promise<string | null> => {
+const getCommitMessage = async (
+	messages: string[],
+	skipConfirm: boolean
+): Promise<string | null> => {
 	// Single message case
 	if (messages.length === 1) {
 		const [message] = messages;
@@ -103,7 +103,7 @@ export default async (
 		if (!providerInstance) {
 			const isInteractive = process.stdout.isTTY && !process.env.CI;
 			if (isInteractive) {
-				console.log('Welcome to aicommits! Let\'s set up your AI provider.');
+				console.log("Welcome to aicommits! Let's set up your AI provider.");
 				console.log('Run `aicommits setup` to configure your provider.');
 				outro('Setup required. Please run: aicommits setup');
 				return;
@@ -117,7 +117,11 @@ export default async (
 		// Validate provider config
 		const validation = providerInstance.validateConfig();
 		if (!validation.valid) {
-			throw new KnownError(`Provider configuration issues: ${validation.errors.join(', ')}. Run \`aicommits setup\` to reconfigure.`);
+			throw new KnownError(
+				`Provider configuration issues: ${validation.errors.join(
+					', '
+				)}. Run \`aicommits setup\` to reconfigure.`
+			);
 		}
 
 		// Model selection priority: env var > provider-specific > default
@@ -128,8 +132,8 @@ export default async (
 		} else if (providerInstance.name === 'togetherai') {
 			config.model = config['together-model'];
 		} else {
-			// For custom/ollama, use the general model setting
-			config.model = config.model;
+			// For custom/ollama, use the general model setting or default
+			config.model = config.model || providerInstance.getDefaultModel();
 		}
 
 		const s = spinner();
@@ -137,10 +141,10 @@ export default async (
 		const startTime = Date.now();
 		let messages: string[];
 		try {
-			const hostname = providerInstance.getBaseUrl().replace(/^https?:\/\//, '');
+			const baseUrl = providerInstance.getBaseUrl();
 			const apiKey = providerInstance.getApiKey() || '';
 			messages = await generateCommitMessage(
-				hostname,
+				baseUrl,
 				apiKey,
 				config.model,
 				config.locale,
@@ -148,8 +152,7 @@ export default async (
 				config.generate,
 				config['max-length'],
 				config.type,
-				config.timeout,
-				config.proxy
+				config.timeout
 			);
 		} finally {
 			const duration = Date.now() - startTime;

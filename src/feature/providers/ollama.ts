@@ -16,9 +16,7 @@ export class OllamaProvider extends BaseProvider {
 			placeholder: 'http://localhost:11434',
 		});
 
-		const updates: [string, string][] = [
-			['provider', this.name],
-		];
+		const updates: [string, string][] = [['provider', this.name]];
 
 		if (endpoint) {
 			updates.push(['endpoint', endpoint as string]);
@@ -26,7 +24,9 @@ export class OllamaProvider extends BaseProvider {
 
 		await this.updateConfig(updates);
 
-		outro('Make sure Ollama is running locally. Visit https://ollama.ai for installation instructions.');
+		outro(
+			'Make sure Ollama is running locally. Visit https://ollama.ai for installation instructions.'
+		);
 	}
 
 	async getModels(): Promise<{ models: string[]; error?: string }> {
@@ -46,15 +46,21 @@ export class OllamaProvider extends BaseProvider {
 			}
 
 			const data = await response.json();
-			const modelsArray = data.models || [];
+			const modelsArray: [
+				{
+					name: string;
+					model: string;
+				}
+			] = data.models || [];
 			const models = modelsArray
-				.filter((model: any) => model.name)
-				.map((model: any) => model.name)
+				.filter((model) => model.model)
+				.map((model) => model.model)
 				.slice(0, 20);
 
 			return { models };
 		} catch (error: unknown) {
-			const errorMessage = error instanceof Error ? error.message : 'Request failed';
+			const errorMessage =
+				error instanceof Error ? error.message : 'Request failed';
 			return { models: [], error: errorMessage };
 		}
 	}

@@ -47,24 +47,24 @@ export default () =>
 			throw new KnownError(`Provider configuration issues: ${validation.errors.join(', ')}. Run \`aicommits setup\` to reconfigure.`);
 		}
 
-		const hostname = providerInstance.getBaseUrl().replace(/^https?:\/\//, '');
+		const baseUrl = providerInstance.getBaseUrl();
 		const apiKey = providerInstance.getApiKey() || '';
+		const model = config.model || providerInstance.getDefaultModel();
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
 		let messages: string[];
 		try {
 			messages = await generateCommitMessage(
-				hostname,
+				baseUrl,
 				apiKey,
-				config.model,
+				model,
 				config.locale,
 				staged!.diff,
 				config.generate,
 				config['max-length'],
 				config.type,
-				config.timeout,
-				config.proxy
+				config.timeout
 			);
 		} finally {
 			s.stop('Changes analyzed');
