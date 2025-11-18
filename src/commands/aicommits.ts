@@ -90,9 +90,9 @@ export default async (
 
 		const { env } = process;
 		const config = await getConfig({
-			OPENAI_API_KEY: env.OPENAI_API_KEY || env.OPENAI_KEY,
-			'openai-base-url': env.OPENAI_BASE_URL,
-			'openai-model': env.OPENAI_MODEL,
+			OPENAI_API_KEY: env.OPENAI_API_KEY,
+			OPENAI_BASE_URL: env.OPENAI_BASE_URL,
+			OPENAI_MODEL: env.OPENAI_MODEL,
 			proxy:
 				env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
 			generate: generate?.toString(),
@@ -114,6 +114,9 @@ export default async (
 			}
 		}
 
+		// Use config timeout, or default per provider
+		const timeout = config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
+
 		// Validate provider config
 		const validation = providerInstance.validateConfig();
 		if (!validation.valid) {
@@ -124,17 +127,8 @@ export default async (
 			);
 		}
 
-		// Model selection priority: env var > provider-specific > default
-		if (config['openai-model'] && providerInstance.name === 'openai') {
-			config.model = config['openai-model'];
-		} else if (providerInstance.name === 'openai') {
-			config.model = config['openai-model'];
-		} else if (providerInstance.name === 'togetherai') {
-			config.model = config['together-model'];
-		} else {
-			// For custom/ollama, use the general model setting or default
-			config.model = config.model || providerInstance.getDefaultModel();
-		}
+		// Use the unified model setting or provider default
+		config.model = config.OPENAI_MODEL || providerInstance.getDefaultModel();
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
@@ -152,7 +146,7 @@ export default async (
 				config.generate,
 				config['max-length'],
 				config.type,
-				config.timeout
+				timeout
 			);
 		} finally {
 			const duration = Date.now() - startTime;

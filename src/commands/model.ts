@@ -8,6 +8,7 @@ export default command(
 	{
 		name: 'model',
 		description: 'Select or change your AI model',
+		alias: ['-m', 'models'],
 	},
 	() => {
 		(async () => {
@@ -28,16 +29,9 @@ export default command(
 
 			console.log(`Current provider: ${provider.displayName}`);
 
-			// Show current model based on provider
-			let currentModel = '';
-			if (config.provider === 'openai') {
-				currentModel = config['openai-model'];
-			} else if (config.provider === 'togetherai') {
-				currentModel = config['together-model'];
-			} else {
-				currentModel = config.model;
-			}
-			console.log(`Current model: ${currentModel || 'not set'}`);
+			// Show current model
+			const currentModel = config.OPENAI_MODEL;
+			console.log(`Current model: ${currentModel && currentModel !== 'undefined' ? currentModel : 'not set'}`);
 
 			// Validate provider config
 			const validation = provider.validateConfig();
@@ -51,29 +45,21 @@ export default command(
 			}
 
 			// Select model using provider
-			try {
-				const selectedModel = await selectModel(
-					provider.getBaseUrl(),
-					provider.getApiKey() || '',
-					currentModel,
-					provider.name
-				);
+			const selectedModel = await selectModel(
+				provider.getBaseUrl(),
+				provider.getApiKey() || '',
+				currentModel,
+				provider.name
+			);
 
+			if (selectedModel) {
 				// Save the selected model
-				const configs: [string, string][] = [];
-				if (config.provider === 'openai') {
-					configs.push(['openai-model', selectedModel]);
-				} else if (config.provider === 'togetherai') {
-					configs.push(['together-model', selectedModel]);
-				} else {
-					configs.push(['model', selectedModel]);
-				}
-
-				await setConfigs(configs);
+				await setConfigs([['OPENAI_MODEL', selectedModel]]);
 				outro(`✅ Model updated to: ${selectedModel}`);
-			} catch (error) {
+			} else {
+				// Clear the model if selection was cancelled
+				await setConfigs([['OPENAI_MODEL', '']]);
 				outro('Model selection cancelled');
-				return;
 			}
 		})().catch((error) => {
 			console.error(`❌ Model selection failed: ${error.message}`);

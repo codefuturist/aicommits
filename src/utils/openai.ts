@@ -42,12 +42,16 @@ const createChatCompletion = async (
 	return data as ChatCompletion;
 };
 
-const sanitizeMessage = (message: string) =>
-	message
+const sanitizeMessage = (message: string, maxLength: number) => {
+	let sanitized = message
 		.trim()
-		.replace(/[\n\r]/g, '')
+		.split('\n')[0] // Take only the first line
 		.replace(/(\w)\.$/, '$1')
-		.replace(/^["'`]|["'`]$/g, ''); // Remove surrounding quotes
+		.replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes
+		.substring(0, maxLength);
+
+	return sanitized;
+};
 
 const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
 
@@ -82,11 +86,8 @@ export const generateCommitMessage = async (
 						content: diff,
 					},
 				],
-				temperature: 0.7,
-				top_p: 1,
-				frequency_penalty: 0,
-				presence_penalty: 0,
-				max_tokens: 500,
+				temperature: 0.4,
+				max_tokens: 100,
 				stream: false,
 				n: completions,
 			},
@@ -98,7 +99,7 @@ export const generateCommitMessage = async (
 		);
 		return deduplicateMessages(
 			validChoices.map((choice) =>
-				sanitizeMessage(choice.message.content ?? '')
+				sanitizeMessage(choice.message.content ?? '', maxLength)
 			)
 		);
 	} catch (error) {

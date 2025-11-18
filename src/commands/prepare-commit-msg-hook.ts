@@ -49,7 +49,12 @@ export default () =>
 
 		const baseUrl = providerInstance.getBaseUrl();
 		const apiKey = providerInstance.getApiKey() || '';
-		const model = config.model || providerInstance.getDefaultModel();
+
+		// Use config timeout, or default per provider
+		const timeout = config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
+
+		// Use the unified model or provider default
+		let model = config.OPENAI_MODEL || providerInstance.getDefaultModel();
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
@@ -64,7 +69,7 @@ export default () =>
 				config.generate,
 				config['max-length'],
 				config.type,
-				config.timeout
+				timeout
 			);
 		} finally {
 			s.stop('Changes analyzed');

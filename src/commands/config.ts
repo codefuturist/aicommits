@@ -16,39 +16,18 @@ export default command(
 			// If no mode provided, show all current config (excluding defaults)
 			if (!mode) {
 				const config = await getConfig({}, true);
-				const sensitiveKeys = ['OPENAI_API_KEY', 'TOGETHER_API_KEY', 'api-key'];
 
-				// Default values to exclude from display
-				const defaults = {
-					locale: 'en',
-					generate: 1,
-					type: '',
-					timeout: 10_000,
-					'max-length': 72,
-					model: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
-					'openai-model': 'gpt-5-mini',
-					'together-model': 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
-					provider: undefined, // Show provider when set
-				};
-
-				console.log('Current configuration:');
-				let hasConfig = false;
-
-				for (const [key, value] of Object.entries(config)) {
-					// Skip undefined/null/empty values and default values
-					if (value === undefined || value === null || value === '') continue;
-					if (defaults[key as keyof typeof defaults] === value) continue;
-
-					hasConfig = true;
-					const displayValue = sensitiveKeys.includes(key)
-						? `${String(value).substring(0, 4)}****`
-						: String(value);
-					console.log(`  ${key}=${displayValue}`);
+				console.log('Provider:', config.provider);
+				if (config.OPENAI_API_KEY) {
+					console.log('API Key:', `${config.OPENAI_API_KEY.substring(0, 4)}****`);
+				}
+				if (config.OPENAI_BASE_URL) {
+					console.log('Base URL:', config.OPENAI_BASE_URL);
+				}
+				if (config.OPENAI_MODEL) {
+					console.log('Model:', config.OPENAI_MODEL);
 				}
 
-				if (!hasConfig) {
-					console.log('  (using all default values)');
-				}
 				return;
 			}
 

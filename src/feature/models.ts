@@ -120,7 +120,7 @@ export const selectModel = async (
 	apiKey: string,
 	currentModel?: string,
 	provider?: string
-): Promise<string> => {
+): Promise<string | null> => {
 	// Fetch models
 	console.log('Fetching available models...');
 	const result = await fetchModels(baseUrl, apiKey, provider);
@@ -139,7 +139,7 @@ export const selectModel = async (
 		}));
 
 		// Move current model to the top if it exists
-		if (currentModel) {
+		if (currentModel && currentModel !== 'undefined') {
 			const currentIndex = modelOptions.findIndex(
 				(opt) => opt.value === currentModel
 			);
@@ -173,23 +173,32 @@ export const selectModel = async (
 
 		const { select, text } = await import('@clack/prompts');
 
-		const modelChoice = await select({
-			message: 'Choose your model:',
-			options: [
-				...modelOptions,
-				{ label: 'Custom model name...', value: 'custom' },
-			],
-		});
+		let modelChoice;
+		try {
+			modelChoice = await select({
+				message: 'Choose your model:',
+				options: [
+					...modelOptions,
+					{ label: 'Custom model name...', value: 'custom' },
+				],
+			});
+		} catch {
+			return null;
+		}
 
 		if (modelChoice === 'custom') {
-			const customModel = await text({
-				message: 'Enter your custom model name:',
-				validate: (value) => {
-					if (!value) return 'Model name is required';
-					return;
-				},
-			});
-			selectedModel = customModel as string;
+			try {
+				const customModel = await text({
+					message: 'Enter your custom model name:',
+					validate: (value) => {
+						if (!value) return 'Model name is required';
+						return;
+					},
+				});
+				selectedModel = customModel as string;
+			} catch {
+				return null;
+			}
 		} else {
 			selectedModel = modelChoice as string;
 		}
@@ -199,14 +208,18 @@ export const selectModel = async (
 			'Could not fetch available models. Please specify a model name manually.'
 		);
 		const { text } = await import('@clack/prompts');
-		const model = await text({
-			message: 'Enter your model name:',
-			validate: (value) => {
-				if (!value) return 'Model name is required';
-				return;
-			},
-		});
-		selectedModel = model as string;
+		try {
+			const model = await text({
+				message: 'Enter your model name:',
+				validate: (value) => {
+					if (!value) return 'Model name is required';
+					return;
+				},
+			});
+			selectedModel = model as string;
+		} catch {
+			return null;
+		}
 	}
 
 	return selectedModel;

@@ -21,51 +21,23 @@ const parseAssert = (name: string, condition: boolean, message: string) => {
 
 const configParsers = {
 	OPENAI_API_KEY(key?: string) {
-		if (key) {
-			parseAssert('OPENAI_API_KEY', key.startsWith('sk-'), 'Must start with "sk-"');
-			// Key can range from 43~51 characters. There's no spec to assert this.
-		}
 		return key;
 	},
-	TOGETHER_API_KEY(key?: string) {
-		if (key) {
-			parseAssert('TOGETHER_API_KEY', key.startsWith('tgp_'), 'Must start with "tgp_"');
-		}
+	OPENAI_BASE_URL(key?: string) {
 		return key;
 	},
-	'api-key'(key?: string) {
-		return key;
-	},
-	'openai-base-url'(key?: string) {
-		return key;
-	},
-	provider(key?: string) {
-		if (!key) {
-			return undefined;
-		}
-		const validProviders = ['openai', 'togetherai', 'ollama', 'custom'];
-		parseAssert('provider', validProviders.includes(key), `Must be one of: ${validProviders.join(', ')}`);
-		return key;
-	},
-	endpoint(key?: string) {
-		if (!key || key.length === 0) {
-			return undefined;
-		}
-
-		parseAssert('endpoint', /^https?:\/\//.test(key), 'Must be a valid URL');
-
-		return key;
+	OPENAI_MODEL(key?: string) {
+		return key || '';
 	},
 	locale(locale?: string) {
 		if (!locale) {
 			return 'en';
 		}
-
 		parseAssert('locale', !!locale, 'Cannot be empty');
 		parseAssert(
 			'locale',
 			/^[a-z-]+$/i.test(locale),
-			'Must be a valid locale (letters and dashes/underscores). You can consult the list of codes in: https://wikipedia.org/wiki/List_of_ISO_639-1_codes'
+			'Must be a valid locale (letters and dashes/underscores).'
 		);
 		return locale;
 	},
@@ -73,61 +45,33 @@ const configParsers = {
 		if (!count) {
 			return 1;
 		}
-
 		parseAssert('generate', /^\d+$/.test(count), 'Must be an integer');
-
 		const parsed = Number(count);
 		parseAssert('generate', parsed > 0, 'Must be greater than 0');
 		parseAssert('generate', parsed <= 5, 'Must be less or equal to 5');
-
 		return parsed;
 	},
 	type(type?: string) {
 		if (!type) {
 			return '';
 		}
-
 		parseAssert(
 			'type',
 			commitTypes.includes(type as CommitType),
 			'Invalid commit type'
 		);
-
 		return type as CommitType;
 	},
 	proxy(url?: string) {
 		if (!url || url.length === 0) {
 			return undefined;
 		}
-
 		parseAssert('proxy', /^https?:\/\//.test(url), 'Must be a valid URL');
-
 		return url;
-	},
-	model(model?: string) {
-		if (!model || model.length === 0) {
-			return 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
-		}
-
-		return model;
-	},
-	'openai-model'(model?: string) {
-		if (!model || model.length === 0) {
-			return 'gpt-5-mini';
-		}
-
-		return model;
-	},
-	'together-model'(model?: string) {
-		if (!model || model.length === 0) {
-			return 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
-		}
-
-		return model;
 	},
 	timeout(timeout?: string) {
 		if (!timeout) {
-			return 10_000;
+			return undefined;
 		}
 
 		parseAssert('timeout', /^\d+$/.test(timeout), 'Must be an integer');
@@ -141,16 +85,13 @@ const configParsers = {
 		if (!maxLength) {
 			return 72;
 		}
-
 		parseAssert('max-length', /^\d+$/.test(maxLength), 'Must be an integer');
-
 		const parsed = Number(maxLength);
 		parseAssert(
 			'max-length',
 			parsed >= 20,
 			'Must be greater than 20 characters'
 		);
-
 		return parsed;
 	},
 } as const;
@@ -164,11 +105,12 @@ type RawConfig = {
 export type ValidConfig = {
 	[Key in ConfigKeys]: ReturnType<(typeof configParsers)[Key]>;
 } & {
-	'openai-model': string;
-	'together-model': string;
-	endpoint: string | undefined;
-	'openai-base-url': string | undefined;
+	OPENAI_API_KEY: string | undefined;
+	OPENAI_BASE_URL: string | undefined;
+	OPENAI_MODEL: string;
+	model: string | undefined;
 	provider: string | undefined;
+	timeout: number | undefined;
 };
 
 const getConfigPath = () => path.join(os.homedir(), '.aicommits');
@@ -203,7 +145,22 @@ export const getConfig = async (
 		}
 	}
 
-	return parsedConfig as ValidConfig;
+	// Detect provider from OPENAI_BASE_URL
+	let provider: string | undefined;
+	const baseUrl = parsedConfig.OPENAI_BASE_URL as string | undefined;
+	if (baseUrl) {
+		if (baseUrl === 'https://api.openai.com') {
+			provider = 'openai';
+		} else if (baseUrl === 'https://api.together.xyz') {
+			provider = 'togetherai';
+		} else if (baseUrl.startsWith('http://localhost:11434')) {
+			provider = 'ollama';
+		} else {
+			provider = 'custom';
+		}
+	}
+
+	return { ...parsedConfig, provider } as ValidConfig;
 };
 
 export const setConfigs = async (keyValues: [key: string, value: string][]) => {
@@ -214,8 +171,12 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 			throw new KnownError(`Invalid config property: ${key}`);
 		}
 
-		const parsed = configParsers[key as ConfigKeys](value);
-		config[key as ConfigKeys] = parsed as any;
+		if (value === '') {
+			delete config[key as ConfigKeys];
+		} else {
+			const parsed = configParsers[key as ConfigKeys](value);
+			config[key as ConfigKeys] = parsed as any;
+		}
 	}
 
 	await fs.writeFile(getConfigPath(), ini.stringify(config), 'utf8');
@@ -226,71 +187,37 @@ export const getProviderInfo = (config: ValidConfig) => {
 	let hostname: string;
 	let apiKey: string;
 
-	// Priority: Explicit provider setting > Environment variables > Auto-detection
-	if (config.provider) {
-		provider = config.provider;
-
-		// Set provider-specific defaults based on explicit provider choice
-		if (provider === 'openai') {
-			hostname = config['openai-base-url'] ? config['openai-base-url'].replace(/^https?:\/\//, '') : 'api.openai.com';
-			apiKey = config.OPENAI_API_KEY || '';
-			if (!apiKey) {
-				throw new KnownError('Please set OPENAI_API_KEY for OpenAI provider');
-			}
-		} else if (provider === 'togetherai') {
-			hostname = 'api.together.xyz';
-			apiKey = config.TOGETHER_API_KEY || '';
-			if (!apiKey) {
-				throw new KnownError('Please set TOGETHER_API_KEY for Together AI provider');
-			}
-		} else if (provider === 'ollama') {
-			hostname = config.endpoint ? config.endpoint.replace(/^https?:\/\//, '') : 'localhost:11434';
-			apiKey = config['api-key'] || '';
-		} else if (provider === 'custom') {
-			if (!config.endpoint) {
-				throw new KnownError('Please set endpoint for custom provider');
-			}
-			hostname = config.endpoint.replace(/^https?:\/\//, '');
-			apiKey = config['api-key'] || '';
-			if (!apiKey) {
-				throw new KnownError('Please set api-key for custom provider');
-			}
-		} else {
-			throw new KnownError(`Unknown provider: ${provider}`);
+	// Auto-detect provider from OPENAI_BASE_URL
+	const baseUrl = config.OPENAI_BASE_URL;
+	if (baseUrl === 'https://api.openai.com') {
+		provider = 'openai';
+		hostname = 'api.openai.com';
+		apiKey = config.OPENAI_API_KEY || '';
+		if (!apiKey) {
+			throw new KnownError('Please set OPENAI_API_KEY for OpenAI provider');
+		}
+	} else if (baseUrl === 'https://api.together.xyz') {
+		provider = 'togetherai';
+		hostname = 'api.together.xyz';
+		apiKey = config.OPENAI_API_KEY || '';
+		if (!apiKey) {
+			throw new KnownError('Please set OPENAI_API_KEY for Together AI provider');
+		}
+	} else if (baseUrl && baseUrl.startsWith('http://localhost:11434')) {
+		provider = 'ollama';
+		hostname = 'localhost:11434';
+		apiKey = '';
+	} else if (baseUrl) {
+		provider = 'custom';
+		hostname = baseUrl.replace(/^https?:\/\//, '');
+		apiKey = config.OPENAI_API_KEY || '';
+		if (!apiKey) {
+			throw new KnownError('Please set OPENAI_API_KEY for custom provider');
 		}
 	} else {
-		// Fallback to auto-detection for backward compatibility
-		if (config['openai-base-url']) {
-			provider = 'openai-compatible';
-			hostname = config['openai-base-url'].replace(/^https?:\/\//, '');
-			apiKey = config.OPENAI_API_KEY || config['api-key'] || '';
-			if (!apiKey) {
-				throw new KnownError(
-					'Please set OPENAI_API_KEY or api-key for custom endpoint'
-				);
-			}
-		} else if (config.endpoint) {
-			provider = 'custom';
-			hostname = config.endpoint.replace(/^https?:\/\//, '');
-			apiKey = config['api-key'] || '';
-			if (!apiKey) {
-				throw new KnownError(
-					'Please set your api-key via `aicommits config set api-key=<your token>`'
-				);
-			}
-		} else if (config.OPENAI_API_KEY) {
-			provider = 'openai';
-			hostname = 'api.openai.com';
-			apiKey = config.OPENAI_API_KEY;
-		} else if (config.TOGETHER_API_KEY) {
-			provider = 'togetherai';
-			hostname = 'api.together.xyz';
-			apiKey = config.TOGETHER_API_KEY;
-		} else {
-			throw new KnownError(
-				'Please configure an AI provider. Run `aicommits setup` or set environment variables (OPENAI_API_KEY, etc.)'
-			);
-		}
+		throw new KnownError(
+			'Please configure an AI provider. Run `aicommits setup` or set environment variables (OPENAI_API_KEY, OPENAI_BASE_URL, etc.)'
+		);
 	}
 
 	return { provider, hostname, apiKey };
