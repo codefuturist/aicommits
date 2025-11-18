@@ -30,7 +30,6 @@ export default () =>
 
 		intro(bgCyan(black(' aicommits ')));
 
-		const { env } = process;
 		const config = await getConfig({});
 
 		const providerInstance = getProvider(config);

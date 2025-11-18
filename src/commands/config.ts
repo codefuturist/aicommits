@@ -15,7 +15,7 @@ export default command(
 
 			// If no mode provided, show all current config (excluding defaults)
 			if (!mode) {
-				const config = await getConfig({}, true);
+				const config = await getConfig({}, {}, true);
 
 				console.log('Provider:', config.provider);
 				if (config.OPENAI_API_KEY) {
@@ -32,7 +32,7 @@ export default command(
 			}
 
 			if (mode === 'get') {
-				const config = await getConfig({}, true);
+				const config = await getConfig({}, {}, true);
 				const sensitiveKeys = ['OPENAI_API_KEY', 'TOGETHER_API_KEY', 'api-key'];
 				for (const key of keyValues) {
 					if (hasOwn(config, key)) {

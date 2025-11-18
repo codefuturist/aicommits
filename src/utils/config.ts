@@ -126,14 +126,21 @@ const readConfigFile = async (): Promise<RawConfig> => {
 
 export const getConfig = async (
 	cliConfig?: RawConfig,
+	envConfig?: RawConfig,
 	suppressErrors?: boolean
 ): Promise<ValidConfig> => {
 	const config = await readConfigFile();
 	const parsedConfig: Record<string, unknown> = {};
+	const { env } = process;
+	const effectiveEnvConfig = envConfig ?? {
+		OPENAI_API_KEY: env.OPENAI_API_KEY,
+		OPENAI_BASE_URL: env.OPENAI_BASE_URL,
+		OPENAI_MODEL: env.OPENAI_MODEL,
+	};
 
 	for (const key of Object.keys(configParsers) as ConfigKeys[]) {
 		const parser = configParsers[key];
-		const value = cliConfig?.[key] ?? config[key];
+		const value = cliConfig?.[key] ?? effectiveEnvConfig?.[key] ?? config[key];
 
 		if (suppressErrors) {
 			try {

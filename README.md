@@ -41,13 +41,15 @@ This will guide you through:
 
   Alternatively, you can use environment variables (recommended for CI/CD):
 
-  ```bash
-  export OPENAI_API_KEY="your_api_key_here"
-  export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
-  export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
-  ```
+   ```bash
+   export OPENAI_API_KEY="your_api_key_here"
+   export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
+   export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
+   ```
 
-This will create a `.aicommits` file in your home directory.
+   > **Note:** When using environment variables, ensure all related variables (e.g., `OPENAI_API_KEY` and `OPENAI_BASE_URL`) are set consistently to avoid configuration mismatches with the config file.
+
+   This will create a `.aicommits` file in your home directory.
 
 ### Upgrading
 
@@ -163,7 +165,12 @@ export OPENAI_MODEL="gpt-4"
 aicommits  # Uses environment variables
 ```
 
-Environment variables take precedence over config file settings.
+Configuration settings are resolved in the following order of precedence:
+
+1. Command-line arguments
+2. Environment variables
+3. Configuration file
+4. Default values
 
 ## Configuration
 

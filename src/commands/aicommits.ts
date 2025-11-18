@@ -90,9 +90,6 @@ export default async (
 
 		const { env } = process;
 		const config = await getConfig({
-			OPENAI_API_KEY: env.OPENAI_API_KEY,
-			OPENAI_BASE_URL: env.OPENAI_BASE_URL,
-			OPENAI_MODEL: env.OPENAI_MODEL,
 			generate: generate?.toString(),
 			type: commitType?.toString(),
 		});
