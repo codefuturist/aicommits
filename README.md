@@ -47,27 +47,7 @@ This will guide you through:
   export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
   ```
 
-  Or configure manually:
 
-  ```sh
-  # For TogetherAI
-  aicommits config set TOGETHER_API_KEY=<your token>
-  ```
-
-# For OpenAI
-
-aicommits config set OPENAI_API_KEY=<your token>
-
-# For Ollama (local)
-
-aicommits config set endpoint=http://localhost:11434
-
-# For custom endpoint
-
-aicommits config set endpoint=https://your-api-endpoint.com
-aicommits config set api-key=<your-api-key>
-
-```
 
 This will create a `.aicommits` file in your home directory.
 
