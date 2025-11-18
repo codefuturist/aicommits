@@ -32,7 +32,7 @@ const createChatCompletion = async (
 		}
 
 		if (response.status === 500) {
-			errorMessage += '\n\nCheck the API status: https://status.openai.com';
+			errorMessage += '\n\nCheck the API provider\'s status page.';
 		}
 
 		throw new KnownError(errorMessage);

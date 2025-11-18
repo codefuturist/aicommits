@@ -27,56 +27,65 @@
    ```
 
 This will guide you through:
+
 - Selecting your AI provider (sets the `provider` config)
 - Configuring your API key
 - **Automatically fetching and selecting from available models** (when supported)
 
-   Supported providers include:
-   - **TogetherAI** (recommended) - Get your API key from [TogetherAI](https://api.together.ai/)
-   - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
-   - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
-   - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
+  Supported providers include:
 
-   Alternatively, you can use environment variables (recommended for CI/CD):
+  - **TogetherAI** (recommended) - Get your API key from [TogetherAI](https://api.together.ai/)
+  - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
+  - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
+  - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
 
-   ```bash
-   export OPENAI_API_KEY="your_api_key_here"
-   export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
-   export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
-   ```
+  Alternatively, you can use environment variables (recommended for CI/CD):
 
-   Or configure manually:
+  ```bash
+  export OPENAI_API_KEY="your_api_key_here"
+  export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
+  export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
+  ```
 
-   ```sh
-   # For TogetherAI
-   aicommits config set TOGETHER_API_KEY=<your token>
+  Or configure manually:
+
+  ```sh
+  # For TogetherAI
+  aicommits config set TOGETHER_API_KEY=<your token>
+  ```
 
 # For OpenAI
+
 aicommits config set OPENAI_API_KEY=<your token>
 
-   # For Ollama (local)
-   aicommits config set endpoint=http://localhost:11434
+# For Ollama (local)
 
-   # For custom endpoint
-   aicommits config set endpoint=https://your-api-endpoint.com
-   aicommits config set api-key=<your-api-key>
-   ```
+aicommits config set endpoint=http://localhost:11434
 
-   This will create a `.aicommits` file in your home directory.
+# For custom endpoint
+
+aicommits config set endpoint=https://your-api-endpoint.com
+aicommits config set api-key=<your-api-key>
+
+```
+
+This will create a `.aicommits` file in your home directory.
 
 ### Upgrading
 
 Check the installed version with:
 
 ```
+
 aicommits --version
-```
+
+````
 
 If it's not the [latest version](https://github.com/Nutlope/aicommits/releases/latest), run:
 
 ```sh
 npm update -g aicommits
-```
+````
 
 ## Usage
 
@@ -184,6 +193,7 @@ aicommits model
 ```
 
 This will:
+
 - Show your current provider and model
 - Fetch available models from your provider's API
 - Let you select from available models or enter a custom model name
@@ -280,6 +290,7 @@ Custom OpenAI-compatible API endpoint URL. Alternative to setting `endpoint` in 
 Model to use for OpenAI-compatible providers. Alternative to setting `openai-model` in config.
 
 **Example:**
+
 ```bash
 export OPENAI_API_KEY="sk-..."
 export OPENAI_BASE_URL="https://api.example.com"
@@ -302,16 +313,6 @@ Default: `1`
 The number of commit messages to generate to pick from.
 
 Note, this will use more tokens as it generates more results.
-
-#### proxy
-
-Set a HTTP/HTTPS proxy to use for requests.
-
-To clear the proxy option, you can use the command (note the empty value after the equals sign):
-
-```sh
-aicommits config set proxy=
-```
 
 #### model
 

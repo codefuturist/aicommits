@@ -31,10 +31,7 @@ export default () =>
 		intro(bgCyan(black(' aicommits ')));
 
 		const { env } = process;
-		const config = await getConfig({
-			proxy:
-				env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
-		});
+		const config = await getConfig({});
 
 		const providerInstance = getProvider(config);
 		if (!providerInstance) {

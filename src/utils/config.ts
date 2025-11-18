@@ -66,8 +66,7 @@ const configParsers = {
 		if (!url || url.length === 0) {
 			return undefined;
 		}
-		parseAssert('proxy', /^https?:\/\//.test(url), 'Must be a valid URL');
-		return url;
+		throw new KnownError('The "proxy" config property is deprecated and no longer supported.');
 	},
 	timeout(timeout?: string) {
 		if (!timeout) {

@@ -93,8 +93,6 @@ export default async (
 			OPENAI_API_KEY: env.OPENAI_API_KEY,
 			OPENAI_BASE_URL: env.OPENAI_BASE_URL,
 			OPENAI_MODEL: env.OPENAI_MODEL,
-			proxy:
-				env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
 			generate: generate?.toString(),
 			type: commitType?.toString(),
 		});

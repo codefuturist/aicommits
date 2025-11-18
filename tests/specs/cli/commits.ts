@@ -384,7 +384,7 @@ export default testSuite(({ describe }) => {
 		});
 
 		describe('proxy', ({ test }) => {
-			test('Fails on invalid proxy', async () => {
+			test('Fails on deprecated proxy config', async () => {
 				const { fixture, aicommits } = await createFixture({
 					...files,
 					'.aicommits': `${files['.aicommits']}\nproxy=http://localhost:1234`,
@@ -397,57 +397,10 @@ export default testSuite(({ describe }) => {
 					reject: false,
 				});
 
-				committing.stdout!.on('data', (buffer: Buffer) => {
-					const stdout = buffer.toString();
-					if (stdout.match('└')) {
-						committing.stdin!.write('y');
-						committing.stdin!.end();
-					}
-				});
-
 				const { stdout, exitCode } = await committing;
 
 				expect(exitCode).toBe(1);
-				expect(stdout).toMatch('connect ECONNREFUSED');
-
-				await fixture.rm();
-			});
-
-			test('Connects with config', async () => {
-				const { fixture, aicommits } = await createFixture({
-					...files,
-					'.aicommits': `${files['.aicommits']}\nproxy=http://localhost:8888`,
-				});
-				const git = await createGit(fixture.path);
-
-				await git('add', ['data.json']);
-
-				const committing = aicommits();
-
-				committing.stdout!.on('data', (buffer: Buffer) => {
-					const stdout = buffer.toString();
-					if (stdout.match('└')) {
-						committing.stdin!.write('y');
-						committing.stdin!.end();
-					}
-				});
-
-				await committing;
-
-				const statusAfter = await git('status', [
-					'--porcelain',
-					'--untracked-files=no',
-				]);
-				expect(statusAfter.stdout).toBe('');
-
-				const { stdout: commitMessage } = await git('log', [
-					'--pretty=format:%s',
-				]);
-				console.log({
-					commitMessage,
-					length: commitMessage.length,
-				});
-				expect(commitMessage.length).toBeLessThanOrEqual(50);
+				expect(stdout).toMatch('The "proxy" config property is deprecated and no longer supported');
 
 				await fixture.rm();
 			});
@@ -492,5 +445,7 @@ export default testSuite(({ describe }) => {
 				await fixture.rm();
 			});
 		});
+
+
 	});
 });

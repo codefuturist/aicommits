@@ -58,7 +58,7 @@ export default testSuite(({ describe }) => {
 				...configOverrides,
 			} as ValidConfig;
 			const commitMessages = await generateCommitMessage(
-				'api.together.xyz',
+				'https://api.together.xyz',
 				TOGETHER_API_KEY!,
 				'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
 				config.locale,

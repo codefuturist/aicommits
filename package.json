@@ -36,7 +36,6 @@
 		"clipboardy": "^5.0.0",
 		"execa": "^7.0.0",
 		"fs-fixture": "^1.2.0",
-		"https-proxy-agent": "^7.0.6",
 		"ini": "^3.0.1",
 		"kolorist": "^1.8.0",
 		"manten": "^0.7.0",
