@@ -9,8 +9,8 @@ export { BaseProvider } from './base.js';
 export type { ProviderConfig } from './base.js';
 
 const providers = {
-	openai: OpenAIProvider,
 	togetherai: TogetherAIProvider,
+	openai: OpenAIProvider,
 	ollama: OllamaProvider,
 	custom: CustomProvider,
 };
@@ -39,7 +39,7 @@ export function getProvider(config: ProviderConfig): BaseProvider | null {
 }
 
 export function getAvailableProviders(): { value: string; label: string }[] {
-	return Object.values(providers).map(ProviderClass => {
+	return Object.values(providers).map((ProviderClass) => {
 		// Create a minimal config object with required properties
 		const minimalConfig = {} as ValidConfig;
 		const instance = new ProviderClass(minimalConfig);

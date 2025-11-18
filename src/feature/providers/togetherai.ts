@@ -8,7 +8,7 @@ export class TogetherAIProvider extends BaseProvider {
 	}
 
 	get displayName(): string {
-		return 'Together AI';
+		return 'Together AI (recommended)';
 	}
 
 	async setup(): Promise<void> {
