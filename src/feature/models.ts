@@ -10,10 +10,11 @@ interface ModelObject {
 // Filter models based on vendor-specific logic
 export const filterModels = (
 	modelsArray: ModelObject[],
-	baseUrl: string,
-	provider?: string
+	baseUrl: string
 ): string[] => {
-	let filtered: ModelObject[] = modelsArray.filter((model) => model.id || model.name);
+	let filtered: ModelObject[] = modelsArray.filter(
+		(model) => model.id || model.name
+	);
 
 	// Vendor-specific filtering
 	if (baseUrl.includes('api.openai.com')) {
@@ -54,14 +55,13 @@ export const filterModels = (
 		filtered = modelsArray.filter((model) => model.id || model.name);
 	}
 
-	return filtered.map((model) => (model.id || model.name)!).slice(0, 20);
+	return filtered.map((model) => (model.id || model.name)!);
 };
 
 // Fetch models from API
 export const fetchModels = async (
 	baseUrl: string,
-	apiKey: string,
-	provider?: string
+	apiKey: string
 ): Promise<{ models: string[]; error?: string }> => {
 	try {
 		const openai = new OpenAI({
@@ -71,7 +71,7 @@ export const fetchModels = async (
 
 		const response = await openai.models.list();
 		const modelsArray: ModelObject[] = response.data;
-		const models = filterModels(modelsArray, baseUrl, provider);
+		const models = filterModels(modelsArray, baseUrl);
 
 		return { models };
 	} catch (error: unknown) {
@@ -90,7 +90,7 @@ export const selectModel = async (
 ): Promise<string | null> => {
 	// Fetch models
 	console.log('Fetching available models...');
-	const result = await fetchModels(baseUrl, apiKey, provider);
+	const result = await fetchModels(baseUrl, apiKey);
 
 	if (result.error) {
 		console.error(`Failed to fetch models: ${result.error}`);
@@ -99,8 +99,10 @@ export const selectModel = async (
 	let selectedModel = '';
 
 	if (result.models.length > 0) {
+		const { select, text, isCancel } = await import('@clack/prompts');
+
 		// Prepare model options
-		let modelOptions = result.models.slice(0, 10).map((model: string) => ({
+		let modelOptions = result.models.map((model: string) => ({
 			label: model,
 			value: model,
 		}));
@@ -138,19 +140,55 @@ export const selectModel = async (
 			}
 		}
 
-		const { select, text } = await import('@clack/prompts');
-
 		let modelChoice;
 		try {
 			modelChoice = await select({
 				message: 'Choose your model:',
 				options: [
+					{ label: '🔍 Search models...', value: 'search' },
 					...modelOptions,
 					{ label: 'Custom model name...', value: 'custom' },
 				],
 			});
 		} catch {
 			return null;
+		}
+
+		if (modelChoice === 'search') {
+			// Search for models
+			const searchTerm = await text({
+				message: 'Enter search term for models:',
+				placeholder: 'e.g., gpt, llama',
+			});
+			if (isCancel(searchTerm)) {
+				return null;
+			}
+
+			let filteredModels = result.models;
+			if (searchTerm) {
+				filteredModels = result.models.filter((model: string) =>
+					model.toLowerCase().includes((searchTerm as string).toLowerCase())
+				);
+			}
+
+			// Prepare filtered options
+			let searchOptions = filteredModels.slice(0, 20).map((model: string) => ({
+				label: model,
+				value: model,
+			}));
+
+			try {
+				const searchChoice = await select({
+					message: `Choose your model (filtered by "${searchTerm}"):`,
+					options: [
+						...searchOptions,
+						{ label: 'Custom model name...', value: 'custom' },
+					],
+				});
+				modelChoice = searchChoice;
+			} catch {
+				return null;
+			}
 		}
 
 		if (modelChoice === 'custom') {
