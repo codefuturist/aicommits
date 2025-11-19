@@ -77,7 +77,7 @@ export class Provider {
 	async getModels(): Promise<{ models: string[]; error?: string }> {
 		const baseUrl = this.getBaseUrl();
 		const apiKey = this.getApiKey() || '';
-		const result = await fetchModels(baseUrl, apiKey, this.name);
+		const result = await fetchModels(baseUrl, apiKey);
 		if (result.error) return result;
 		if (this.def.modelsFilter) {
 			result.models = this.def.modelsFilter(result.models);
