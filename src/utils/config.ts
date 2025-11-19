@@ -154,16 +154,14 @@ export const getConfig = async (
 	// Detect provider from OPENAI_BASE_URL
 	let provider: string | undefined;
 	const baseUrl = parsedConfig.OPENAI_BASE_URL as string | undefined;
-	if (baseUrl) {
-		if (baseUrl === 'https://api.openai.com') {
-			provider = 'openai';
-		} else if (baseUrl === 'https://api.together.xyz') {
-			provider = 'togetherai';
-		} else if (baseUrl.startsWith('http://localhost:11434')) {
-			provider = 'ollama';
-		} else {
-			provider = 'custom';
-		}
+	if (baseUrl === 'https://api.openai.com') {
+		provider = 'openai';
+	} else if (baseUrl === 'https://api.together.xyz') {
+		provider = 'togetherai';
+	} else if (baseUrl && baseUrl.startsWith('http://localhost:11434')) {
+		provider = 'ollama';
+	} else {
+		provider = 'custom';
 	}
 
 	return { ...parsedConfig, provider } as ValidConfig;

@@ -8,7 +8,7 @@ const providers: ProviderDef[] = [
 	{
 		name: 'togetherai',
 		displayName: 'Together AI (recommended)',
-		baseUrl: 'https://api.together.xyz',
+		baseUrl: 'https://api.together.xyz/v1',
 		apiKeyFormat: 'tgp_',
 		modelsFilter: (models) =>
 			models
@@ -23,7 +23,7 @@ const providers: ProviderDef[] = [
 	{
 		name: 'openai',
 		displayName: 'OpenAI',
-		baseUrl: 'https://api.openai.com',
+		baseUrl: 'https://api.openai.com/v1',
 		apiKeyFormat: 'sk-',
 		modelsFilter: (models) =>
 			models
@@ -46,7 +46,7 @@ const providers: ProviderDef[] = [
 	{
 		name: 'ollama',
 		displayName: 'Ollama (local)',
-		baseUrl: 'http://localhost:11434',
+		baseUrl: 'http://localhost:11434/v1',
 		modelsFilter: (models) =>
 			models
 				.filter((m: any) => m.name)

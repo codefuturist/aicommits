@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import type {
 	ChatCompletionCreateParams,
 	ChatCompletion,
@@ -12,34 +13,14 @@ const createChatCompletion = async (
 	json: ChatCompletionCreateParams,
 	timeout: number
 ) => {
-	const url = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(json),
-		signal: AbortSignal.timeout(timeout),
+	const openai = new OpenAI({
+		baseURL: baseUrl,
+		apiKey,
+		timeout,
 	});
 
-	if (!response.ok) {
-		let errorMessage = `API Error: ${response.status} - ${response.statusText}`;
-
-		const data = await response.text();
-		if (data) {
-			errorMessage += `\n\n${data}`;
-		}
-
-		if (response.status === 500) {
-			errorMessage += '\n\nCheck the API provider\'s status page.';
-		}
-
-		throw new KnownError(errorMessage);
-	}
-
-	const data = await response.json();
-	return data as ChatCompletion;
+	const completion = await openai.chat.completions.create(json);
+	return completion;
 };
 
 const sanitizeMessage = (message: string, maxLength: number) => {
@@ -94,11 +75,11 @@ export const generateCommitMessage = async (
 			timeout
 		);
 
-		const validChoices = completion.choices.filter(
-			(choice) => choice.message?.content
+		const validChoices = (completion as ChatCompletion).choices.filter(
+			(choice: ChatCompletion.Choice) => choice.message?.content
 		);
 		return deduplicateMessages(
-			validChoices.map((choice) =>
+			validChoices.map((choice: ChatCompletion.Choice) =>
 				sanitizeMessage(choice.message.content ?? '', maxLength)
 			)
 		);

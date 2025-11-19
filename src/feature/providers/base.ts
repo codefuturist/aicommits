@@ -55,7 +55,7 @@ export class Provider {
 				message: 'Enter Ollama endpoint (leave empty for default):',
 				placeholder: currentEndpoint,
 			});
-			if (endpoint && endpoint !== 'http://localhost:11434') {
+			if (endpoint && endpoint !== 'http://localhost:11434/v1') {
 				updates.push(['OPENAI_BASE_URL', endpoint as string]);
 			}
 		} else if (this.name === 'custom') {

@@ -1,4 +1,5 @@
 // Model filtering, fetching, and selection utilities
+import OpenAI from 'openai';
 
 interface ModelObject {
 	id?: string;
@@ -12,12 +13,7 @@ export const filterModels = (
 	baseUrl: string,
 	provider?: string
 ): string[] => {
-	let filtered: ModelObject[];
-	if (provider === 'ollama') {
-		filtered = modelsArray.filter((model) => model.name);
-	} else {
-		filtered = modelsArray.filter((model) => model.id);
-	}
+	let filtered: ModelObject[] = modelsArray.filter((model) => model.id || model.name);
 
 	// Vendor-specific filtering
 	if (baseUrl.includes('api.openai.com')) {
@@ -55,18 +51,10 @@ export const filterModels = (
 
 	// Final fallback: if filtering results in empty array, return original models
 	if (filtered.length === 0) {
-		if (provider === 'ollama') {
-			filtered = modelsArray.filter((model) => model.name);
-		} else {
-			filtered = modelsArray.filter((model) => model.id);
-		}
+		filtered = modelsArray.filter((model) => model.id || model.name);
 	}
 
-	if (provider === 'ollama') {
-		return filtered.map((model) => model.name!).slice(0, 20);
-	} else {
-		return filtered.map((model) => model.id!).slice(0, 20);
-	}
+	return filtered.map((model) => (model.id || model.name)!).slice(0, 20);
 };
 
 // Fetch models from API
@@ -76,34 +64,13 @@ export const fetchModels = async (
 	provider?: string
 ): Promise<{ models: string[]; error?: string }> => {
 	try {
-		let modelsUrl: string;
-		let headers: Record<string, string> = {
-			'Content-Type': 'application/json',
-		};
-
-		if (provider === 'ollama') {
-			modelsUrl = `${baseUrl.replace(/\/$/, '')}/api/tags`;
-		} else {
-			modelsUrl = `${baseUrl.replace(/\/$/, '')}/v1/models`;
-			headers.Authorization = `Bearer ${apiKey}`;
-		}
-
-		const response = await fetch(modelsUrl, {
-			headers,
-			signal: AbortSignal.timeout(5000),
+		const openai = new OpenAI({
+			baseURL: baseUrl,
+			apiKey,
 		});
 
-		if (!response.ok) {
-			return { models: [], error: `HTTP ${response.status}` };
-		}
-
-		const data = await response.json();
-		let modelsArray: ModelObject[];
-		if (provider === 'ollama') {
-			modelsArray = data.models || [];
-		} else {
-			modelsArray = Array.isArray(data) ? data : data.data || [];
-		}
+		const response = await openai.models.list();
+		const modelsArray: ModelObject[] = response.data;
 		const models = filterModels(modelsArray, baseUrl, provider);
 
 		return { models };
