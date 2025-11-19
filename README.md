@@ -41,15 +41,15 @@ This will guide you through:
 
   Alternatively, you can use environment variables (recommended for CI/CD):
 
-   ```bash
-   export OPENAI_API_KEY="your_api_key_here"
-   export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
-   export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
-   ```
+  ```bash
+  export OPENAI_API_KEY="your_api_key_here"
+  export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
+  export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
+  ```
 
-   > **Note:** When using environment variables, ensure all related variables (e.g., `OPENAI_API_KEY` and `OPENAI_BASE_URL`) are set consistently to avoid configuration mismatches with the config file.
+  > **Note:** When using environment variables, ensure all related variables (e.g., `OPENAI_API_KEY` and `OPENAI_BASE_URL`) are set consistently to avoid configuration mismatches with the config file.
 
-   This will create a `.aicommits` file in your home directory.
+  This will create a `.aicommits` file in your home directory.
 
 ### Upgrading
 
@@ -270,12 +270,6 @@ Default: `1`
 The number of commit messages to generate to pick from.
 
 Note, this will use more tokens as it generates more results.
-
-#### model
-
-Default: `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo`
-
-The Chat Completions (`/v1/chat/completions`) model to use. During `aicommits setup`, you'll be able to choose from available models if your provider supports the `/models` endpoint. For TogetherAI, see [TogetherAI models](https://docs.together.ai/docs/inference-models). For OpenAI, see [OpenAI models](https://platform.openai.com/docs/models/model-endpoint-compatibility). For custom endpoints, use the model name supported by your provider.
 
 #### timeout
 
