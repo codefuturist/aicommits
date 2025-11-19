@@ -1,5 +1,5 @@
 import { command } from 'cleye';
-import { select, outro, isCancel } from '@clack/prompts';
+import { select, text, outro, isCancel } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config.js';
 import {
 	getProvider,
@@ -48,11 +48,33 @@ export default command(
 				providerChoice = choice as string;
 			}
 
+			// Ask for custom base URL if custom provider
+			let customBaseUrl = '';
+			if (providerChoice === 'custom') {
+				const baseUrlInput = await text({
+					message: 'Enter your custom API endpoint:',
+					validate: (value: string) => {
+						if (!value) return 'Endpoint is required';
+						try {
+							new URL(value);
+						} catch {
+							return 'Invalid URL format';
+						}
+						return;
+					},
+				});
+				if (isCancel(baseUrlInput)) {
+					outro('Setup cancelled');
+					return;
+				}
+				customBaseUrl = baseUrlInput as string;
+			}
+
 			// Set default base URL for the provider
-			let defaultBaseUrl = '';
+			let defaultBaseUrl = customBaseUrl;
 			if (providerChoice === 'openai') defaultBaseUrl = 'https://api.openai.com';
 			else if (providerChoice === 'togetherai') defaultBaseUrl = 'https://api.together.xyz';
-			else if (providerChoice === 'ollama') defaultBaseUrl = 'http://localhost:11434';
+			else if (providerChoice === 'ollama') defaultBaseUrl = 'http://localhost:11434/v1';
 
 			// Clear old keys and set defaults
 			const clearUpdates: [string, string][] = [

@@ -15,8 +15,7 @@ const providers: ProviderDef[] = [
 				.filter(
 					(m: any) => !m.type || m.type === 'chat' || m.type === 'language'
 				)
-				.map((m: any) => m.id)
-				.slice(0, 20),
+				.map((m: any) => m.id),
 		defaultModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
 		requiresApiKey: true,
 	},
@@ -38,8 +37,7 @@ const providers: ProviderDef[] = [
 							!m.type ||
 							m.type === 'chat')
 				)
-				.map((m: any) => m.id)
-				.slice(0, 20),
+				.map((m: any) => m.id),
 		defaultModel: 'gpt-5-mini',
 		requiresApiKey: true,
 	},
@@ -48,10 +46,7 @@ const providers: ProviderDef[] = [
 		displayName: 'Ollama (local)',
 		baseUrl: 'http://localhost:11434/v1',
 		modelsFilter: (models) =>
-			models
-				.filter((m: any) => m.name)
-				.map((m: any) => m.name)
-				.slice(0, 20),
+			models.filter((m: any) => m.name).map((m: any) => m.name),
 		defaultModel: 'llama2',
 		requiresApiKey: false,
 	},
@@ -64,8 +59,7 @@ const providers: ProviderDef[] = [
 				.filter(
 					(m: any) => !m.type || m.type === 'chat' || m.type === 'language'
 				)
-				.map((m: any) => m.id)
-				.slice(0, 20),
+				.map((m: any) => m.id),
 		defaultModel: 'gpt-3.5-turbo',
 		requiresApiKey: true,
 	},

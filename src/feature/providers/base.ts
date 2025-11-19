@@ -36,11 +36,19 @@ export class Provider {
 			const currentKey = this.getApiKey();
 			const apiKey = await password({
 				message: currentKey
-					? `Enter your API key (leave empty to keep current: ${currentKey.substring(0, 4)}****):`
+					? `Enter your API key (leave empty to keep current: ${currentKey.substring(
+							0,
+							4
+					  )}****):`
 					: 'Enter your API key:',
 				validate: (value) => {
 					if (!value && !currentKey) return 'API key is required';
-					if (value && this.def.apiKeyFormat && !value.startsWith(this.def.apiKeyFormat)) return `Invalid API key format, must start with "${this.def.apiKeyFormat}"`;
+					if (
+						value &&
+						this.def.apiKeyFormat &&
+						!value.startsWith(this.def.apiKeyFormat)
+					)
+						return `Invalid API key format, must start with "${this.def.apiKeyFormat}"`;
 					return;
 				},
 			});
@@ -56,27 +64,6 @@ export class Provider {
 				placeholder: currentEndpoint,
 			});
 			if (endpoint && endpoint !== 'http://localhost:11434/v1') {
-				updates.push(['OPENAI_BASE_URL', endpoint as string]);
-			}
-		} else if (this.name === 'custom') {
-			const currentEndpoint = this.getBaseUrl();
-			const endpoint = await text({
-				message: currentEndpoint
-					? `Enter your custom API endpoint (current: ${currentEndpoint}):`
-					: 'Enter your custom API endpoint:',
-				validate: (value) => {
-					if (!value && !currentEndpoint) return 'Endpoint is required';
-					if (value) {
-						try {
-							new URL(value);
-						} catch {
-							return 'Invalid URL format';
-						}
-					}
-					return;
-				},
-			});
-			if (endpoint) {
 				updates.push(['OPENAI_BASE_URL', endpoint as string]);
 			}
 		}
