@@ -60,7 +60,7 @@ const providers: ProviderDef[] = [
 					(m: any) => !m.type || m.type === 'chat' || m.type === 'language'
 				)
 				.map((m: any) => m.id),
-		defaultModel: 'gpt-3.5-turbo',
+		defaultModel: '',
 		requiresApiKey: true,
 	},
 ];

@@ -70,7 +70,12 @@ export const fetchModels = async (
 		});
 
 		const response = await openai.models.list();
-		const modelsArray: ModelObject[] = response.data;
+
+		const modelsArray: ModelObject[] =
+			response.data.length > 0
+				? response.data
+				: ((response as any).body as OpenAI.Models.Model[]);
+
 		const models = filterModels(modelsArray, baseUrl);
 
 		return { models };
