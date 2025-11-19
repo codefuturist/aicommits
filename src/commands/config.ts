@@ -14,7 +14,7 @@ export default command(
 	},
 	(argv) => {
 		(async () => {
-			const { mode, keyValue: keyValues } = argv._;
+			const [mode, ...keyValues] = argv._;
 
 			// If no mode provided, show all current config (excluding defaults)
 			if (!mode) {

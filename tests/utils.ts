@@ -59,7 +59,7 @@ export const createFixture = async (source?: string | FileTree) => {
 };
 
 export const files = Object.freeze({
-	'.aicommits': `OPENAI_KEY=${process.env.OPENAI_KEY}`,
+	'.aicommits': `OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`,
 	'data.json': Array.from(
 		{ length: 10 },
 		(_, i) => `${i}. Lorem ipsum dolor sit amet`
@@ -67,9 +67,9 @@ export const files = Object.freeze({
 });
 
 export const assertOpenAiToken = () => {
-	if (!process.env.OPENAI_KEY) {
+	if (!process.env.OPENAI_API_KEY) {
 		throw new Error(
-			'⚠️  process.env.OPENAI_KEY is necessary to run these tests. Skipping...'
+			'⚠️  process.env.OPENAI_API_KEY is necessary to run these tests. Skipping...'
 		);
 	}
 };

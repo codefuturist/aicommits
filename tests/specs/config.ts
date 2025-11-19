@@ -7,7 +7,7 @@ export default testSuite(({ describe }) => {
 	describe('config', async ({ test, describe }) => {
 		const { fixture, aicommits } = await createFixture();
 		const configPath = path.join(fixture.path, '.aicommits');
-		const openAiToken = 'OPENAI_API_KEY=sk-abc';
+		const openAiToken = 'OPENAI_API_KEY=abc';
 
 		test('set unknown config file', async () => {
 			const { stderr } = await aicommits(['config', 'set', 'UNKNOWN=1'], {
@@ -18,9 +18,12 @@ export default testSuite(({ describe }) => {
 		});
 
 		test('set OPENAI_API_KEY', async () => {
-			const { stderr } = await aicommits(['config', 'set', 'OPENAI_API_KEY=abc'], {
-				reject: false,
-			});
+			const { stderr } = await aicommits(
+				['config', 'set', 'OPENAI_API_KEY=abc'],
+				{
+					reject: false,
+				}
+			);
 
 			expect(stderr).toBe('');
 		});
@@ -34,7 +37,7 @@ export default testSuite(({ describe }) => {
 
 		await test('get config file', async () => {
 			const { stdout } = await aicommits(['config', 'get', 'OPENAI_API_KEY']);
-			expect(stdout).toBe('OPENAI_API_KEY=sk-a****');
+			expect(stdout).toBe('OPENAI_API_KEY=abc****');
 		});
 
 		await test('reading unknown config', async () => {
