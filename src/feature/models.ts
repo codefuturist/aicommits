@@ -1,5 +1,6 @@
 // Model filtering, fetching, and selection utilities
 import OpenAI from 'openai';
+import type { ProviderDef } from './providers/base.js';
 
 interface ModelObject {
 	id?: string;
@@ -7,62 +8,13 @@ interface ModelObject {
 	type?: string;
 }
 
-// Filter models based on vendor-specific logic
-export const filterModels = (
-	modelsArray: ModelObject[],
-	baseUrl: string
-): string[] => {
-	let filtered: ModelObject[] = modelsArray.filter(
-		(model) => model.id || model.name
-	);
 
-	// Vendor-specific filtering
-	if (baseUrl.includes('api.openai.com')) {
-		// OpenAI: Prioritize GPT, O-series models
-		const prioritized = filtered.filter(
-			(model) =>
-				model.id &&
-				(model.id.includes('gpt') ||
-					model.id.includes('o1') ||
-					model.id.includes('o3') ||
-					model.id.includes('o4') ||
-					model.id.includes('o5') ||
-					!model.type ||
-					model.type === 'chat')
-		);
-		// If prioritized list is empty, fall back to all models
-		filtered = prioritized.length > 0 ? prioritized : filtered;
-	} else if (baseUrl.includes('api.together.xyz')) {
-		// Together AI: Filter by type if available, otherwise include all
-		const typeFiltered = filtered.filter(
-			(model) =>
-				!model.type || model.type === 'chat' || model.type === 'language'
-		);
-		// If type filtering removes all models, fall back to all models
-		filtered = typeFiltered.length > 0 ? typeFiltered : filtered;
-	} else {
-		// Custom endpoints: Basic filtering
-		const typeFiltered = filtered.filter(
-			(model) =>
-				!model.type || model.type === 'chat' || model.type === 'language'
-		);
-		// If type filtering removes all models, fall back to all models
-		filtered = typeFiltered.length > 0 ? typeFiltered : filtered;
-	}
-
-	// Final fallback: if filtering results in empty array, return original models
-	if (filtered.length === 0) {
-		filtered = modelsArray.filter((model) => model.id || model.name);
-	}
-
-	return filtered.map((model) => (model.id || model.name)!);
-};
 
 // Fetch models from API
 export const fetchModels = async (
 	baseUrl: string,
 	apiKey: string
-): Promise<{ models: string[]; error?: string }> => {
+): Promise<{ models: ModelObject[]; error?: string }> => {
 	try {
 		const openai = new OpenAI({
 			baseURL: baseUrl,
@@ -77,9 +29,7 @@ export const fetchModels = async (
 				? response.data
 				: ((response as any).body as OpenAI.Models.Model[]);
 
-		const models = filterModels(modelsArray, baseUrl);
-
-		return { models };
+		return { models: modelsArray };
 	} catch (error: unknown) {
 		const errorMessage =
 			error instanceof Error ? error.message : 'Request failed';
@@ -92,7 +42,7 @@ export const selectModel = async (
 	baseUrl: string,
 	apiKey: string,
 	currentModel?: string,
-	provider?: string
+	providerDef?: ProviderDef
 ): Promise<string | null> => {
 	// Fetch models
 	console.log('Fetching available models...');
@@ -102,13 +52,22 @@ export const selectModel = async (
 		console.error(`Failed to fetch models: ${result.error}`);
 	}
 
+	// Apply provider-specific filtering
+	let models: string[] = [];
+	if (providerDef?.modelsFilter) {
+		models = providerDef.modelsFilter(result.models);
+	} else {
+		// Fallback: just use model ids/names
+		models = result.models.map((model) => model.id || model.name).filter(Boolean) as string[];
+	}
+
 	let selectedModel = '';
 
-	if (result.models.length > 0) {
+	if (models.length > 0) {
 		const { select, text, isCancel } = await import('@clack/prompts');
 
 		// Prepare model options
-		let modelOptions = result.models.map((model: string) => ({
+		let modelOptions = models.map((model: string) => ({
 			label: model,
 			value: model,
 		}));
@@ -135,7 +94,7 @@ export const selectModel = async (
 		}
 
 		// For Together AI, also prefer the recommended model
-		if (provider === 'togetherai') {
+		if (providerDef?.name === 'togetherai') {
 			const preferredModel = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
 			const preferredIndex = modelOptions.findIndex(
 				(opt) => opt.value === preferredModel
@@ -170,9 +129,9 @@ export const selectModel = async (
 				return null;
 			}
 
-			let filteredModels = result.models;
+			let filteredModels = models;
 			if (searchTerm) {
-				filteredModels = result.models.filter((model: string) =>
+				filteredModels = models.filter((model: string) =>
 					model.toLowerCase().includes((searchTerm as string).toLowerCase())
 				);
 			}

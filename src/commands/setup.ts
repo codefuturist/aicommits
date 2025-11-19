@@ -92,7 +92,7 @@ export default command(
 					provider.getBaseUrl(),
 					provider.getApiKey() || '',
 					undefined,
-					provider.name
+					provider.getDefinition()
 				);
 
 				if (selectedModel) {

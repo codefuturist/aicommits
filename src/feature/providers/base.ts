@@ -28,6 +28,10 @@ export class Provider {
 		return this.def.displayName;
 	}
 
+	getDefinition(): ProviderDef {
+		return this.def;
+	}
+
 	async setup(): Promise<void> {
 		const { text, password } = await import('@clack/prompts');
 		const updates: [string, string][] = [];
@@ -78,11 +82,17 @@ export class Provider {
 		const baseUrl = this.getBaseUrl();
 		const apiKey = this.getApiKey() || '';
 		const result = await fetchModels(baseUrl, apiKey);
-		if (result.error) return result;
+		if (result.error) return { models: [], error: result.error };
+
+		let models: string[];
 		if (this.def.modelsFilter) {
-			result.models = this.def.modelsFilter(result.models);
+			models = this.def.modelsFilter(result.models);
+		} else {
+			// Fallback: just use model ids/names
+			models = result.models.map((model) => model.id || model.name).filter(Boolean) as string[];
 		}
-		return result;
+
+		return { models };
 	}
 
 	getApiKey(): string | undefined {

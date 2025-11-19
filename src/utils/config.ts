@@ -194,6 +194,13 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 	await fs.writeFile(getConfigPath(), ini.stringify(config), 'utf8');
 };
 
+// Mapping of base URLs to provider names to avoid circular dependency
+const baseUrlToProvider: Record<string, string> = {
+	'https://api.openai.com/v1': 'openai',
+	'https://api.together.xyz/v1': 'togetherai',
+	'http://localhost:11434/v1': 'ollama',
+};
+
 export const getProviderInfo = (config: ValidConfig) => {
 	let provider: string;
 	let hostname: string;
@@ -201,35 +208,34 @@ export const getProviderInfo = (config: ValidConfig) => {
 
 	// Auto-detect provider from OPENAI_BASE_URL
 	const baseUrl = config.OPENAI_BASE_URL;
-	if (baseUrl === 'https://api.openai.com') {
-		provider = 'openai';
-		hostname = 'api.openai.com';
+	if (!baseUrl) {
+		throw new KnownError(
+			'Please configure an AI provider. Run `aicommits setup` or set environment variables (OPENAI_API_KEY, OPENAI_BASE_URL, etc.)'
+		);
+	}
+
+	// Try to match against known provider base URLs
+	const knownProvider = baseUrlToProvider[baseUrl];
+	if (knownProvider) {
+		provider = knownProvider;
+		hostname = baseUrl.replace(/^https?:\/\//, '');
 		apiKey = config.OPENAI_API_KEY || '';
-		if (!apiKey) {
-			throw new KnownError('Please set OPENAI_API_KEY for OpenAI provider');
+		if (!apiKey && knownProvider !== 'ollama') {
+			throw new KnownError(`Please set OPENAI_API_KEY for ${knownProvider} provider`);
 		}
-	} else if (baseUrl === 'https://api.together.xyz') {
-		provider = 'togetherai';
-		hostname = 'api.together.xyz';
-		apiKey = config.OPENAI_API_KEY || '';
-		if (!apiKey) {
-			throw new KnownError('Please set OPENAI_API_KEY for Together AI provider');
-		}
-	} else if (baseUrl && baseUrl.startsWith('http://localhost:11434')) {
+	} else if (baseUrl.startsWith('http://localhost:11434')) {
+		// Special case for Ollama with different base URL format
 		provider = 'ollama';
 		hostname = 'localhost:11434';
 		apiKey = '';
-	} else if (baseUrl) {
+	} else {
+		// Custom provider
 		provider = 'custom';
 		hostname = baseUrl.replace(/^https?:\/\//, '');
 		apiKey = config.OPENAI_API_KEY || '';
 		if (!apiKey) {
 			throw new KnownError('Please set OPENAI_API_KEY for custom provider');
 		}
-	} else {
-		throw new KnownError(
-			'Please configure an AI provider. Run `aicommits setup` or set environment variables (OPENAI_API_KEY, OPENAI_BASE_URL, etc.)'
-		);
 	}
 
 	return { provider, hostname, apiKey };

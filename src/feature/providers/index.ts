@@ -32,3 +32,7 @@ export function getProviderBaseUrl(providerName: string): string {
 	const provider = providers.find((p) => p.name === providerName);
 	return provider?.baseUrl || '';
 }
+
+export function getProviderDef(providerName: string): ProviderDef | undefined {
+	return providers.find((p) => p.name === providerName);
+}

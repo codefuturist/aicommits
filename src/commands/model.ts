@@ -52,7 +52,7 @@ export default command(
 				provider.getBaseUrl(),
 				provider.getApiKey() || '',
 				currentModel,
-				provider.name
+				provider.getDefinition()
 			);
 
 			if (selectedModel) {
