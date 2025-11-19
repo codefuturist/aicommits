@@ -71,6 +71,7 @@ export const fetchModels = async (
 
 		const response = await openai.models.list();
 
+		// we do this since Together API for openai models has different response than standard
 		const modelsArray: ModelObject[] =
 			response.data.length > 0
 				? response.data
