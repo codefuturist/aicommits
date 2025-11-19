@@ -8,7 +8,7 @@ import { OpenAiCustom } from './openaiCustom.js';
 export { Provider } from './base.js';
 export type { ProviderDef } from './base.js';
 
-const providers: ProviderDef[] = [
+export const providers: ProviderDef[] = [
 	TogetherProvider,
 	OpenAiProvider,
 	OllamaProvider,

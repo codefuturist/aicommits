@@ -4,6 +4,7 @@ import os from 'os';
 import ini from 'ini';
 import { fileExists } from './fs.js';
 import { KnownError } from './error.js';
+import { providers } from '../feature/providers/index.js';
 
 const commitTypes = ['', 'conventional', 'gitmoji'] as const;
 
@@ -66,7 +67,9 @@ const configParsers = {
 		if (!url || url.length === 0) {
 			return undefined;
 		}
-		throw new KnownError('The "proxy" config property is deprecated and no longer supported.');
+		throw new KnownError(
+			'The "proxy" config property is deprecated and no longer supported.'
+		);
 	},
 	timeout(timeout?: string) {
 		if (!timeout) {
@@ -151,26 +154,32 @@ export const getConfig = async (
 		}
 	}
 
-  // Detect provider from OPENAI_BASE_URL or default to OpenAI if only API key is set
-  let provider: string | undefined;
-  let baseUrl = parsedConfig.OPENAI_BASE_URL as string | undefined;
-  const apiKey = parsedConfig.OPENAI_API_KEY as string | undefined;
+	// Detect provider from OPENAI_BASE_URL or default to OpenAI if only API key is set
+	let provider: string | undefined;
+	let baseUrl = parsedConfig.OPENAI_BASE_URL as string | undefined;
+	const apiKey = parsedConfig.OPENAI_API_KEY as string | undefined;
 
-  // If only API key is provided without base URL, default to OpenAI
-  if (!baseUrl && apiKey) {
-    baseUrl = 'https://api.openai.com';
-    parsedConfig.OPENAI_BASE_URL = baseUrl;
-  }
+	// If only API key is provided without base URL, default to OpenAI
+	if (!baseUrl && apiKey) {
+		const openaiProvider = providers.find(p => p.name === 'openai');
+		if (openaiProvider) {
+			baseUrl = openaiProvider.baseUrl;
+			parsedConfig.OPENAI_BASE_URL = baseUrl;
+		}
+	}
 
-  if (baseUrl === 'https://api.openai.com') {
-    provider = 'openai';
-  } else if (baseUrl === 'https://api.together.xyz') {
-    provider = 'togetherai';
-  } else if (baseUrl && baseUrl.startsWith('http://localhost:11434')) {
-    provider = 'ollama';
-  } else {
-    provider = 'custom';
-  }
+	if (baseUrl) {
+		const matchingProvider = providers.find(p =>
+			p.baseUrl === baseUrl || (p.name === 'ollama' && baseUrl.startsWith(p.baseUrl.slice(0, -3)))
+		);
+		if (matchingProvider) {
+			provider = matchingProvider.name;
+		} else {
+			provider = 'custom';
+		}
+	} else if (apiKey) {
+		provider = 'openai';
+	}
 
 	return { ...parsedConfig, provider } as ValidConfig;
 };
@@ -192,51 +201,4 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 	}
 
 	await fs.writeFile(getConfigPath(), ini.stringify(config), 'utf8');
-};
-
-// Mapping of base URLs to provider names to avoid circular dependency
-const baseUrlToProvider: Record<string, string> = {
-	'https://api.openai.com/v1': 'openai',
-	'https://api.together.xyz/v1': 'togetherai',
-	'http://localhost:11434/v1': 'ollama',
-};
-
-export const getProviderInfo = (config: ValidConfig) => {
-	let provider: string;
-	let hostname: string;
-	let apiKey: string;
-
-	// Auto-detect provider from OPENAI_BASE_URL
-	const baseUrl = config.OPENAI_BASE_URL;
-	if (!baseUrl) {
-		throw new KnownError(
-			'Please configure an AI provider. Run `aicommits setup` or set environment variables (OPENAI_API_KEY, OPENAI_BASE_URL, etc.)'
-		);
-	}
-
-	// Try to match against known provider base URLs
-	const knownProvider = baseUrlToProvider[baseUrl];
-	if (knownProvider) {
-		provider = knownProvider;
-		hostname = baseUrl.replace(/^https?:\/\//, '');
-		apiKey = config.OPENAI_API_KEY || '';
-		if (!apiKey && knownProvider !== 'ollama') {
-			throw new KnownError(`Please set OPENAI_API_KEY for ${knownProvider} provider`);
-		}
-	} else if (baseUrl.startsWith('http://localhost:11434')) {
-		// Special case for Ollama with different base URL format
-		provider = 'ollama';
-		hostname = 'localhost:11434';
-		apiKey = '';
-	} else {
-		// Custom provider
-		provider = 'custom';
-		hostname = baseUrl.replace(/^https?:\/\//, '');
-		apiKey = config.OPENAI_API_KEY || '';
-		if (!apiKey) {
-			throw new KnownError('Please set OPENAI_API_KEY for custom provider');
-		}
-	}
-
-	return { provider, hostname, apiKey };
 };
