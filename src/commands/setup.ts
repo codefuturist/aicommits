@@ -4,6 +4,7 @@ import { getConfig, setConfigs } from '../utils/config.js';
 import {
 	getProvider,
 	getAvailableProviders,
+	getProviderBaseUrl,
 } from '../feature/providers/index.js';
 
 export default command(
@@ -13,29 +14,9 @@ export default command(
 		help: {
 			description: 'Configure your AI provider and settings',
 		},
-		flags: {
-			provider: {
-				type: String,
-				description: 'AI provider (openai, togetherai, ollama, custom)',
-			},
-			'api-key': {
-				type: String,
-				description: 'API key for the provider',
-			},
-			'base-url': {
-				type: String,
-				description: 'Base URL for the provider',
-			},
-			model: {
-				type: String,
-				description: 'Model to use',
-			},
-		},
 	},
 	(argv) => {
 		(async () => {
-			const { provider: providerFlag, 'api-key': apiKeyFlag, 'base-url': baseUrlFlag, model: modelFlag } = argv.flags;
-
 			let config = await getConfig();
 			const currentProvider = config.provider;
 
@@ -50,11 +31,10 @@ export default command(
 
 			try {
 				const providerOptions = getAvailableProviders();
-				const initialProvider = providerFlag || currentProvider;
 				const choice = await select({
 					message: 'Choose your AI provider:',
 					options: providerOptions,
-					initialValue: initialProvider,
+					initialValue: currentProvider,
 				});
 
 				if (isCancel(choice)) {
@@ -86,10 +66,7 @@ export default command(
 				}
 
 				// Set default base URL for the provider
-				let defaultBaseUrl = customBaseUrl;
-				if (providerChoice === 'openai') defaultBaseUrl = 'https://api.openai.com';
-				else if (providerChoice === 'togetherai') defaultBaseUrl = 'https://api.together.xyz';
-				else if (providerChoice === 'ollama') defaultBaseUrl = 'http://localhost:11434/v1';
+				let defaultBaseUrl = customBaseUrl || getProviderBaseUrl(providerChoice);
 
 				// Clear old keys and set defaults
 				const clearUpdates: [string, string][] = [
@@ -107,34 +84,23 @@ export default command(
 					return;
 				}
 
-				// Run provider-specific setup, but skip prompts if flags provided
-				const isNonInteractive = providerFlag || apiKeyFlag || baseUrlFlag || modelFlag;
-				if (isNonInteractive) {
-					const updates: [string, string][] = [];
-					if (apiKeyFlag) updates.push(['OPENAI_API_KEY', apiKeyFlag]);
-					if (baseUrlFlag) updates.push(['OPENAI_BASE_URL', baseUrlFlag]);
-					else if (providerFlag) updates.push(['OPENAI_BASE_URL', defaultBaseUrl]);
-					if (modelFlag) updates.push(['OPENAI_MODEL', modelFlag]);
-					await setConfigs(updates);
+				await provider.setup();
+
+				// Select model interactively
+				const { selectModel } = await import('../feature/models.js');
+				const selectedModel = await selectModel(
+					provider.getBaseUrl(),
+					provider.getApiKey() || '',
+					undefined,
+					provider.name
+				);
+
+				if (selectedModel) {
+					// Save the selected model
+					await setConfigs([['OPENAI_MODEL', selectedModel]]);
+					console.log(`Model selected: ${selectedModel}`);
 				} else {
-					await provider.setup();
-
-					// Select model interactively
-					const { selectModel } = await import('../feature/models.js');
-					const selectedModel = await selectModel(
-						provider.getBaseUrl(),
-						provider.getApiKey() || '',
-						undefined,
-						provider.name
-					);
-
-					if (selectedModel) {
-						// Save the selected model
-						await setConfigs([['OPENAI_MODEL', selectedModel]]);
-						console.log(`Model selected: ${selectedModel}`);
-					} else {
-						console.log('Model selection cancelled.');
-					}
+					console.log('Model selection cancelled.');
 				}
 
 				setupSuccessful = true;

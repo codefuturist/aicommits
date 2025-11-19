@@ -133,7 +133,7 @@ export const getConfig = async (
 	const parsedConfig: Record<string, unknown> = {};
 	const { env } = process;
 	const effectiveEnvConfig = envConfig ?? {
-		OPENAI_API_KEY: env.OPENAI_API_KEY,
+		OPENAI_API_KEY: env.OPENAI_API_KEY || env.OPENAI_KEY,
 		OPENAI_BASE_URL: env.OPENAI_BASE_URL,
 		OPENAI_MODEL: env.OPENAI_MODEL,
 	};
@@ -151,18 +151,26 @@ export const getConfig = async (
 		}
 	}
 
-	// Detect provider from OPENAI_BASE_URL
-	let provider: string | undefined;
-	const baseUrl = parsedConfig.OPENAI_BASE_URL as string | undefined;
-	if (baseUrl === 'https://api.openai.com') {
-		provider = 'openai';
-	} else if (baseUrl === 'https://api.together.xyz') {
-		provider = 'togetherai';
-	} else if (baseUrl && baseUrl.startsWith('http://localhost:11434')) {
-		provider = 'ollama';
-	} else {
-		provider = 'custom';
-	}
+  // Detect provider from OPENAI_BASE_URL or default to OpenAI if only API key is set
+  let provider: string | undefined;
+  let baseUrl = parsedConfig.OPENAI_BASE_URL as string | undefined;
+  const apiKey = parsedConfig.OPENAI_API_KEY as string | undefined;
+
+  // If only API key is provided without base URL, default to OpenAI
+  if (!baseUrl && apiKey) {
+    baseUrl = 'https://api.openai.com';
+    parsedConfig.OPENAI_BASE_URL = baseUrl;
+  }
+
+  if (baseUrl === 'https://api.openai.com') {
+    provider = 'openai';
+  } else if (baseUrl === 'https://api.together.xyz') {
+    provider = 'togetherai';
+  } else if (baseUrl && baseUrl.startsWith('http://localhost:11434')) {
+    provider = 'ollama';
+  } else {
+    provider = 'custom';
+  }
 
 	return { ...parsedConfig, provider } as ValidConfig;
 };

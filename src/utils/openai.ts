@@ -91,6 +91,12 @@ export const generateCommitMessage = async (
 			);
 		}
 
+		if (errorAsAny.status === 429) {
+			throw new KnownError(
+				'You have exceeded your OpenAI API quota. Please check your plan and billing details at https://platform.openai.com/account/billing'
+			);
+		}
+
 		throw errorAsAny;
 	}
 };
