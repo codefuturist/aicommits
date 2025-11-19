@@ -10,6 +10,9 @@ export default command(
 	{
 		name: 'setup',
 		description: 'Configure your AI provider and settings',
+		help: {
+			description: 'Configure your AI provider and settings',
+		},
 		flags: {
 			provider: {
 				type: String,

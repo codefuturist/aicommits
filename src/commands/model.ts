@@ -8,6 +8,9 @@ export default command(
 	{
 		name: 'model',
 		description: 'Select or change your AI model',
+		help: {
+			description: 'Select or change your AI model',
+		},
 		alias: ['-m', 'models'],
 	},
 	() => {

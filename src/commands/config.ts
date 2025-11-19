@@ -6,7 +6,10 @@ import { KnownError, handleCliError } from '../utils/error.js';
 export default command(
 	{
 		name: 'config',
-
+		description: 'View or modify configuration settings',
+		help: {
+			description: 'View or modify configuration settings',
+		},
 		parameters: ['[mode]', '[key=value...]'],
 	},
 	(argv) => {
