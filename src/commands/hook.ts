@@ -25,6 +25,10 @@ import(${JSON.stringify(pathToFileURL(hookPath))})
 export default command(
 	{
 		name: 'hook',
+		description: 'Install or uninstall the Git hook for automatic commit messages',
+		help: {
+			description: 'Install or uninstall the Git hook for automatic commit messages',
+		},
 		parameters: ['<install/uninstall>'],
 	},
 	(argv) => {

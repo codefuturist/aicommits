@@ -3,8 +3,9 @@
     <img src=".github/screenshot.png" alt="AI Commits"/>
     <h1 align="center">AI Commits</h1>
   </div>
-	<p>A CLI that writes your git commit messages for you with AI. Never write a commit message again.</p>
-	<a href="https://www.npmjs.com/package/aicommits"><img src="https://img.shields.io/npm/v/aicommits" alt="Current version"></a>
+  <p>A CLI that writes your git commit messages for you with AI. Never write a commit message again.</p>
+  <a href="https://www.npmjs.com/package/aicommits"><img src="https://img.shields.io/npm/v/aicommits" alt="Current version"></a>
+  <a href="https://www.npmjs.com/package/aicommits"><img src="https://img.shields.io/npm/dt/aicommits" alt="Downloads"></a>
 </div>
 
 ---
@@ -19,24 +20,45 @@
    npm install -g aicommits
    ```
 
-2. Retrieve your API key from [OpenAI](https://platform.openai.com/account/api-keys)
-
-   > Note: If you haven't already, you'll have to create an account and set up billing.
-
-3. Set the key so aicommits can use it:
+2. Run the setup command to choose your AI provider:
 
    ```sh
-   aicommits config set OPENAI_KEY=<your token>
+   aicommits setup
    ```
 
-   This will create a `.aicommits` file in your home directory.
+This will guide you through:
+
+- Selecting your AI provider (sets the `provider` config)
+- Configuring your API key
+- **Automatically fetching and selecting from available models** (when supported)
+
+  Supported providers include:
+
+  - **TogetherAI** (recommended) - Get your API key from [TogetherAI](https://api.together.ai/)
+  - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
+  - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
+  - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
+
+  Alternatively, you can use environment variables (recommended for CI/CD):
+
+  ```bash
+  export OPENAI_API_KEY="your_api_key_here"
+  export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
+  export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
+  ```
+
+  > **Note:** When using environment variables, ensure all related variables (e.g., `OPENAI_API_KEY` and `OPENAI_BASE_URL`) are set consistently to avoid configuration mismatches with the config file.
+
+  This will create a `.aicommits` file in your home directory.
 
 ### Upgrading
 
 Check the installed version with:
 
 ```
+
 aicommits --version
+
 ```
 
 If it's not the [latest version](https://github.com/Nutlope/aicommits/releases/latest), run:
@@ -65,6 +87,15 @@ aicommits --all # or -a
 ```
 
 > 👉 **Tip:** Use the `aic` alias if `aicommits` is too long for you.
+
+#### CLI Options
+
+- `--generate` or `-g`: Number of messages to generate (default: **1**)
+- `--exclude` or `-x`: Files to exclude from AI analysis
+- `--all` or `-a`: Automatically stage changes in tracked files for the commit (default: **false**)
+- `--type` or `-t`: Git commit message format (default: **conventional**). Supports `conventional` and `gitmoji`
+- `--confirm` or `-y`: Skip confirmation when committing after message generation (default: **false**)
+- `--clipboard` or `-c`: Copy the selected message to the clipboard instead of committing (default: **false**)
 
 #### Generate multiple recommendations
 
@@ -121,7 +152,52 @@ aicommits hook uninstall
 
 3. Save and close the editor to commit!
 
+### Environment Variables
+
+You can also configure aicommits using environment variables instead of the config file.
+
+**Example:**
+
+```bash
+export OPENAI_API_KEY="sk-..."
+export OPENAI_BASE_URL="https://api.example.com"
+export OPENAI_MODEL="gpt-4"
+aicommits  # Uses environment variables
+```
+
+Configuration settings are resolved in the following order of precedence:
+
+1. Command-line arguments
+2. Environment variables
+3. Configuration file
+4. Default values
+
 ## Configuration
+
+### Viewing current configuration
+
+To view all current configuration options that differ from defaults, run:
+
+```sh
+aicommits config
+```
+
+This will display only non-default configuration values with API keys masked for security. If no custom configuration is set, it will show "(using all default values)".
+
+### Changing your model
+
+To interactively select or change your AI model, run:
+
+```sh
+aicommits model
+```
+
+This will:
+
+- Show your current provider and model
+- Fetch available models from your provider's API
+- Let you select from available models or enter a custom model name
+- Update your configuration automatically
 
 ### Reading a configuration value
 
@@ -134,13 +210,13 @@ aicommits config get <key>
 For example, to retrieve the API key, you can use:
 
 ```sh
-aicommits config get OPENAI_KEY
+aicommits config get OPENAI_API_KEY
 ```
 
 You can also retrieve multiple configuration options at once by separating them with spaces:
 
 ```sh
-aicommits config get OPENAI_KEY generate
+aicommits config get OPENAI_API_KEY generate
 ```
 
 ### Setting a configuration value
@@ -154,22 +230,32 @@ aicommits config set <key>=<value>
 For example, to set the API key, you can use:
 
 ```sh
-aicommits config set OPENAI_KEY=<your-api-key>
+aicommits config set OPENAI_API_KEY=<your-api-key>
 ```
 
 You can also set multiple configuration options at once by separating them with spaces, like
 
 ```sh
-aicommits config set OPENAI_KEY=<your-api-key> generate=3 locale=en
+aicommits config set OPENAI_API_KEY=<your-api-key> generate=3 locale=en
 ```
 
-### Options
+### Config Options
 
-#### OPENAI_KEY
+#### OPENAI_API_KEY
 
-Required
+Your OpenAI API key or custom provider API Key
 
-The OpenAI API key. You can retrieve it from [OpenAI API Keys page](https://platform.openai.com/account/api-keys).
+#### OPENAI_BASE_URL
+
+Custom OpenAI-compatible API endpoint URL.
+
+#### OPENAI_MODEL
+
+Model to use for OpenAI-compatible providers.
+
+#### provider
+
+The selected AI provider. Set automatically during `aicommits setup`. Valid values: `openai`, `togetherai`, `ollama`, `custom`.
 
 #### locale
 
@@ -185,24 +271,6 @@ The number of commit messages to generate to pick from.
 
 Note, this will use more tokens as it generates more results.
 
-#### proxy
-
-Set a HTTP/HTTPS proxy to use for requests.
-
-To clear the proxy option, you can use the command (note the empty value after the equals sign):
-
-```sh
-aicommits config set proxy=
-```
-
-#### model
-
-Default: `gpt-3.5-turbo`
-
-The Chat Completions (`/v1/chat/completions`) model to use. Consult the list of models available in the [OpenAI Documentation](https://platform.openai.com/docs/models/model-endpoint-compatibility).
-
-> Tip: If you have access, try upgrading to [`gpt-4`](https://platform.openai.com/docs/models/gpt-4) for next-level code analysis. It can handle double the input size, but comes at a higher cost. Check out OpenAI's website to learn more.
-
 #### timeout
 
 The timeout for network requests to the OpenAI API in milliseconds.
@@ -217,7 +285,7 @@ aicommits config set timeout=20000 # 20s
 
 The maximum character length of the generated commit message.
 
-Default: `50`
+Default: `72`
 
 ```sh
 aicommits config set max-length=100
@@ -241,7 +309,7 @@ aicommits config set type=
 
 ## How it works
 
-This CLI tool runs `git diff` to grab all your latest code changes, sends them to OpenAI's GPT-3, then returns the AI generated commit message.
+This CLI tool runs `git diff` to grab all your latest code changes, sends them to the configured AI provider (TogetherAI by default), then returns the AI generated commit message.
 
 Video coming soon where I rebuild it from scratch to show you how to easily build your own CLI tools powered by AI.
 

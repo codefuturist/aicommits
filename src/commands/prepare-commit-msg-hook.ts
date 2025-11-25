@@ -2,9 +2,10 @@ import fs from 'fs/promises';
 import { intro, outro, spinner } from '@clack/prompts';
 import { black, green, red, bgCyan } from 'kolorist';
 import { getStagedDiff } from '../utils/git.js';
-import { getConfig } from '../utils/config.js';
+import { getConfig } from '../utils/config-runtime.js';
+import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
-import { KnownError, handleCliError } from '../utils/error.js';
+import { KnownError, handleCommandError } from '../utils/error.js';
 
 const [messageFilePath, commitSource] = process.argv.slice(2);
 
@@ -29,26 +30,42 @@ export default () =>
 
 		intro(bgCyan(black(' aicommits ')));
 
-		const { env } = process;
-		const config = await getConfig({
-			proxy:
-				env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY,
-		});
+		const config = await getConfig({});
+
+		const providerInstance = getProvider(config);
+		if (!providerInstance) {
+			throw new KnownError('Invalid provider configuration. Run `aicommits setup` to reconfigure.');
+		}
+
+		// Validate provider config
+		const validation = providerInstance.validateConfig();
+		if (!validation.valid) {
+			throw new KnownError(`Provider configuration issues: ${validation.errors.join(', ')}. Run \`aicommits setup\` to reconfigure.`);
+		}
+
+		const baseUrl = providerInstance.getBaseUrl();
+		const apiKey = providerInstance.getApiKey() || '';
+
+		// Use config timeout, or default per provider
+		const timeout = config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
+
+		// Use the unified model or provider default
+		let model = config.OPENAI_MODEL || providerInstance.getDefaultModel();
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');
 		let messages: string[];
 		try {
 			messages = await generateCommitMessage(
-				config.OPENAI_KEY,
-				config.model,
+				baseUrl,
+				apiKey,
+				model,
 				config.locale,
 				staged!.diff,
 				config.generate,
 				config['max-length'],
 				config.type,
-				config.timeout,
-				config.proxy
+				timeout
 			);
 		} finally {
 			s.stop('Changes analyzed');
@@ -89,8 +106,4 @@ export default () =>
 
 		await fs.appendFile(messageFilePath, instructions);
 		outro(`${green('✔')} Saved commit message!`);
-	})().catch((error) => {
-		outro(`${red('✖')} ${error.message}`);
-		handleCliError(error);
-		process.exit(1);
-	});
+	})().catch(handleCommandError);
