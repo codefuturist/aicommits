@@ -1,6 +1,6 @@
 import { expect, testSuite } from 'manten';
 import { generateCommitMessage } from '../../../src/utils/openai.js';
-import type { ValidConfig } from '../../../src/utils/config.js';
+import type { ValidConfig } from '../../../src/utils/config-types.js';
 import { getDiff } from '../../utils.js';
 
 const { TOGETHER_API_KEY } = process.env;

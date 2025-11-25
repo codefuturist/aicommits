@@ -4,7 +4,7 @@ import type {
 	ChatCompletion,
 } from 'openai/resources/chat/completions';
 import { KnownError } from './error.js';
-import type { CommitType } from './config.js';
+import type { CommitType } from './config-types.js';
 import { generatePrompt } from './prompt.js';
 
 const createChatCompletion = async (

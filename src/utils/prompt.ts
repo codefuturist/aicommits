@@ -1,4 +1,4 @@
-import type { CommitType } from './config.js';
+import type { CommitType } from './config-types.js';
 
 const commitTypeFormats: Record<CommitType, string> = {
 	'': '<commit message>',

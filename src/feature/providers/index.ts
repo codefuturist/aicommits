@@ -1,19 +1,10 @@
 import { Provider, type ProviderDef } from './base.js';
-import type { ValidConfig } from '../../utils/config.js';
-import { TogetherProvider } from './together.js';
-import { OpenAiProvider } from './opeai.js';
-import { OllamaProvider } from './ollama.js';
-import { OpenAiCustom } from './openaiCustom.js';
+import type { ValidConfig } from '../../utils/config-types.js';
+import { providers } from './providers-data.js';
 
 export { Provider } from './base.js';
 export type { ProviderDef } from './base.js';
-
-export const providers: ProviderDef[] = [
-	TogetherProvider,
-	OpenAiProvider,
-	OllamaProvider,
-	OpenAiCustom,
-];
+export { providers };
 
 export function getProvider(config: ValidConfig): Provider | null {
 	const providerName = config.provider;

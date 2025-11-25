@@ -1,4 +1,5 @@
-import { getConfig, setConfigs, type ValidConfig } from '../../utils/config.js';
+import { getConfig, setConfigs } from '../../utils/config-runtime.js';
+import type { ValidConfig } from '../../utils/config-types.js';
 import { fetchModels } from '../models.js';
 
 export type ProviderDef = {
