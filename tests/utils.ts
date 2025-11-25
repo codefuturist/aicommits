@@ -66,13 +66,7 @@ export const files = Object.freeze({
 	).join('\n'),
 });
 
-export const assertOpenAiToken = () => {
-	if (!process.env.OPENAI_API_KEY) {
-		throw new Error(
-			'⚠️  process.env.OPENAI_API_KEY is necessary to run these tests. Skipping...'
-		);
-	}
-};
+
 
 // See ./diffs/README.md in order to generate diff files
 export const getDiff = async (diffName: string): Promise<string> =>

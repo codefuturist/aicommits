@@ -1,6 +1,5 @@
 import { testSuite, expect } from 'manten';
 import {
-	assertOpenAiToken,
 	createFixture,
 	createGit,
 	files,
@@ -15,7 +14,12 @@ export default testSuite(({ describe }) => {
 		return;
 	}
 
-	assertOpenAiToken();
+	if (!process.env.OPENAI_API_KEY) {
+		console.warn(
+			'⚠️  process.env.OPENAI_API_KEY is necessary to run these tests. Skipping...'
+		);
+		return;
+	}
 
 	describe('Commits', async ({ test, describe }) => {
 		test('Excludes files', async () => {
