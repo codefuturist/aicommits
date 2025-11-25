@@ -12,7 +12,7 @@
 
 ## Setup
 
-> The minimum supported version of Node.js is v20. Check your Node.js version with `node --version`.
+> The minimum supported version of Node.js is v22. Check your Node.js version with `node --version`.
 
 1. Install _aicommits_:
 
