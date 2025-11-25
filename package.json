@@ -45,7 +45,11 @@
 	},
 	"release": {
 		"branches": [
-			"main"
+			"main",
+			{
+				"name": "develop",
+				"prerelease": true
+			}
 		]
 	}
 }
