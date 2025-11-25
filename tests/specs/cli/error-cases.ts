@@ -7,9 +7,9 @@ export default testSuite(({ describe }) => {
 			const { fixture, aicommits } = await createFixture({
 				'.aicommits': 'OPENAI_API_KEY=sk-test-key\nprovider=openai'
 			});
-			const { stdout, exitCode } = await aicommits([], { reject: false });
+			const { stderr, exitCode } = await aicommits([], { reject: false });
 			expect(exitCode).toBe(1);
-			expect(stdout).toMatch('The current directory must be a Git repository!');
+			expect(stderr).toMatch('The current directory must be a Git repository!');
 			await fixture.rm();
 		});
 
@@ -19,9 +19,9 @@ export default testSuite(({ describe }) => {
 			});
 			await createGit(fixture.path);
 
-			const { stdout, exitCode } = await aicommits([], { reject: false });
+			const { stderr, exitCode } = await aicommits([], { reject: false });
 			expect(exitCode).toBe(1);
-			expect(stdout).toMatch(
+			expect(stderr).toMatch(
 				'No staged changes found. Stage your changes manually, or automatically stage all changes with the `--all` flag.'
 			);
 			await fixture.rm();
