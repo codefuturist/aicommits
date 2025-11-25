@@ -1,5 +1,5 @@
 import { TogetherProvider } from './together.js';
-import { OpenAiProvider } from './opeai.js';
+import { OpenAiProvider } from './openai.js';
 import { OllamaProvider } from './ollama.js';
 import { OpenAiCustom } from './openaiCustom.js';
 

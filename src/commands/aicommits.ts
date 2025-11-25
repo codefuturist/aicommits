@@ -14,10 +14,10 @@ import {
 	getStagedDiff,
 	getDetectedMessage,
 } from '../utils/git.js';
-import { getConfig } from '../utils/config.js';
+import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
-import { KnownError, handleCliError } from '../utils/error.js';
+import { KnownError, handleCommandError } from '../utils/error.js';
 
 const getCommitMessage = async (
 	messages: string[],
@@ -173,8 +173,4 @@ export default async (
 		// Commit the message
 		await execa('git', ['commit', '-m', message, ...rawArgv]);
 		outro(`${green('✔')} Successfully committed!`);
-	})().catch((error) => {
-		outro(`${red('✖')} ${error.message}`);
-		handleCliError(error);
-		process.exit(1);
-	});
+	})().catch(handleCommandError);

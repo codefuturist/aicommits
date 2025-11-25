@@ -1,6 +1,6 @@
 import { command } from 'cleye';
 import { select, text, outro, isCancel } from '@clack/prompts';
-import { getConfig, setConfigs } from '../utils/config.js';
+import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import {
 	getProvider,
 	getAvailableProviders,

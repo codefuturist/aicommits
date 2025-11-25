@@ -1,4 +1,4 @@
-import { dim } from 'kolorist';
+import { dim, red } from 'kolorist';
 import pkg from '../../package.json';
 const { version } = pkg;
 
@@ -19,4 +19,10 @@ export const handleCliError = (error: unknown) => {
 			`${indent}https://github.com/Nutlope/aicommits/issues/new/choose`
 		);
 	}
+};
+
+export const handleCommandError = (error: unknown) => {
+	console.error(`${red('✖')} ${(error as Error).message}`);
+	handleCliError(error);
+	process.exit(1);
 };
