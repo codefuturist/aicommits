@@ -1,4 +1,5 @@
 import { dim, red } from 'kolorist';
+import { outro } from '@clack/prompts';
 import pkg from '../../package.json';
 const { version } = pkg;
 
@@ -22,7 +23,7 @@ export const handleCliError = (error: unknown) => {
 };
 
 export const handleCommandError = (error: unknown) => {
-	console.error(`${red('✖')} ${(error as Error).message}`);
+	outro(`${red('✖')} ${(error as Error).message}`);
 	handleCliError(error);
 	process.exit(1);
 };

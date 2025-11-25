@@ -5,7 +5,7 @@ import { getStagedDiff } from '../utils/git.js';
 import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
-import { KnownError, handleCliError } from '../utils/error.js';
+import { KnownError, handleCommandError } from '../utils/error.js';
 
 const [messageFilePath, commitSource] = process.argv.slice(2);
 
@@ -106,8 +106,4 @@ export default () =>
 
 		await fs.appendFile(messageFilePath, instructions);
 		outro(`${green('✔')} Saved commit message!`);
-	})().catch((error) => {
-		outro(`${red('✖')} ${error.message}`);
-		handleCliError(error);
-		process.exit(1);
-	});
+	})().catch(handleCommandError);
