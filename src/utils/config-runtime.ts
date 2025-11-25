@@ -4,18 +4,29 @@ import os from 'os';
 import ini from 'ini';
 import { fileExists } from './fs.js';
 import { KnownError } from './error.js';
-import { configParsers, hasOwn, type ValidConfig, type ConfigKeys, type RawConfig } from './config-types.js';
+import {
+	configParsers,
+	hasOwn,
+	type ValidConfig,
+	type ConfigKeys,
+	type RawConfig,
+} from './config-types.js';
 import { providers } from '../feature/providers/providers-data.js';
 
 const getDefaultBaseUrl = (): string => {
-	const openaiProvider = providers.find(p => p.name === 'openai');
+	const openaiProvider = providers.find((p) => p.name === 'openai');
 	return openaiProvider?.baseUrl || '';
 };
 
-const detectProvider = (baseUrl?: string, apiKey?: string): string | undefined => {
+const detectProvider = (
+	baseUrl?: string,
+	apiKey?: string
+): string | undefined => {
 	if (baseUrl) {
-		const matchingProvider = providers.find(p =>
-			p.baseUrl === baseUrl || (p.name === 'ollama' && baseUrl.startsWith(p.baseUrl.slice(0, -3)))
+		const matchingProvider = providers.find(
+			(p) =>
+				p.baseUrl === baseUrl ||
+				(p.name === 'ollama' && baseUrl.startsWith(p.baseUrl.slice(0, -3)))
 		);
 		if (matchingProvider) {
 			return matchingProvider.name;
