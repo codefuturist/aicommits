@@ -20,6 +20,8 @@ import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 import { TOGETHER_PREFERRED_MODEL } from '../utils/constants.js';
 
+
+
 const getCommitMessage = async (
 	messages: string[],
 	skipConfirm: boolean
@@ -32,7 +34,7 @@ const getCommitMessage = async (
 			return message;
 		}
 
-		console.log(`\n${green('📝 Suggested commit message:')}\n${message}\n`);
+		console.log(`\n\x1b[1m${message}\x1b[0m\n`);
 		const confirmed = await confirm({
 			message: 'Use this commit message?',
 		});
