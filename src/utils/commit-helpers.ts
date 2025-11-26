@@ -1,3 +1,5 @@
+import { KnownError } from './error.js';
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const retry = async <T>(fn: () => Promise<T>, attempts: number = 3, delay: number = 1000): Promise<T> => {
@@ -19,12 +21,19 @@ export const getCommitMessage = async (
 	const { select, confirm, isCancel } = await import('@clack/prompts');
 	const { dim } = await import('kolorist');
 
+	// Check if interactive prompts are available
+	const isInteractive = process.stdout.isTTY && !process.env.CI;
+
 	// Single message case
 	if (messages.length === 1) {
 		const [message] = messages;
 
 		if (skipConfirm) {
 			return message;
+		}
+
+		if (!isInteractive) {
+			throw new KnownError('Interactive terminal required for commit message confirmation. Use --confirm flag to skip confirmation.');
 		}
 
 		console.log(`\n\x1b[1m${message}\x1b[0m\n`);
@@ -38,6 +47,10 @@ export const getCommitMessage = async (
 	// Multiple messages case
 	if (skipConfirm) {
 		return messages[0];
+	}
+
+	if (!isInteractive) {
+		throw new KnownError('Interactive terminal required for commit message selection. Use --confirm flag to skip selection and use the first message.');
 	}
 
 	const selected = await select({
