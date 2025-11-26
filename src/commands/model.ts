@@ -1,8 +1,9 @@
 import { command } from 'cleye';
-import { outro } from '@clack/prompts';
+import { outro, log } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { selectModel } from '../feature/models.js';
+import { TOGETHER_PREFERRED_MODEL } from '../utils/constants.js';
 
 export default command(
 	{
@@ -34,7 +35,15 @@ export default command(
 
 			// Show current model
 			const currentModel = config.OPENAI_MODEL;
-			console.log(`Current model: ${currentModel && currentModel !== 'undefined' ? currentModel : 'not set'}`);
+			console.log(
+				`Current model: ${
+					currentModel && currentModel !== 'undefined'
+						? currentModel
+						: 'not set'
+				}`
+			);
+
+			const originalCurrent = currentModel;
 
 			// Validate provider config
 			const validation = provider.validateConfig();
@@ -60,9 +69,13 @@ export default command(
 				await setConfigs([['OPENAI_MODEL', selectedModel]]);
 				outro(`✅ Model updated to: ${selectedModel}`);
 			} else {
-				// Clear the model if selection was cancelled
-				await setConfigs([['OPENAI_MODEL', '']]);
-				outro('Model selection cancelled');
+				// If cancelled and no original model, set to preferred for Together AI
+				if (provider.name === 'togetherai' && (!originalCurrent || originalCurrent === 'undefined')) {
+					await setConfigs([['OPENAI_MODEL', TOGETHER_PREFERRED_MODEL]]);
+					outro(`✅ Model set to default: ${TOGETHER_PREFERRED_MODEL}`);
+				} else {
+					outro('Model selection cancelled');
+				}
 			}
 		})().catch((error) => {
 			console.error(`❌ Model selection failed: ${error.message}`);

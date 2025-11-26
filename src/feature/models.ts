@@ -1,14 +1,18 @@
 // Model filtering, fetching, and selection utilities
 import OpenAI from 'openai';
 import type { ProviderDef } from './providers/base.js';
+import {
+	TOGETHER_PREFERRED_MODEL,
+	CURRENT_LABEL_FORMAT,
+	PREFERRED_LABEL_FORMAT,
+} from '../utils/constants.js';
+import { isCancel } from '@clack/prompts';
 
 interface ModelObject {
 	id?: string;
 	name?: string;
 	type?: string;
 }
-
-
 
 // Fetch models from API
 export const fetchModels = async (
@@ -57,7 +61,9 @@ const fetchAndFilterModels = async (
 		models = providerDef.modelsFilter(result.models);
 	} else {
 		// Fallback: just use model ids/names
-		models = result.models.map((model) => model.id || model.name).filter(Boolean) as string[];
+		models = result.models
+			.map((model) => model.id || model.name)
+			.filter(Boolean) as string[];
 	}
 	return models;
 };
@@ -79,7 +85,9 @@ const prepareModelOptions = (
 		);
 		if (currentIndex >= 0) {
 			// Mark as current and move to top
-			modelOptions[currentIndex].label += ' (current)';
+			modelOptions[currentIndex].label = CURRENT_LABEL_FORMAT(
+				modelOptions[currentIndex].value
+			);
 			if (currentIndex > 0) {
 				const [current] = modelOptions.splice(currentIndex, 1);
 				modelOptions.unshift(current);
@@ -87,21 +95,29 @@ const prepareModelOptions = (
 		} else {
 			// Current model not in fetched list, add it at the top
 			modelOptions.unshift({
-				label: `${currentModel} (current)`,
+				label: CURRENT_LABEL_FORMAT(currentModel),
 				value: currentModel,
 			});
 		}
 	}
 
-	// For Together AI, also prefer the recommended model
-	if (providerDef?.name === 'togetherai') {
-		const preferredModel = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo';
+	// For Together AI, highlight the preferred model if it's not the current
+	if (
+		providerDef?.name === 'togetherai' &&
+		currentModel !== TOGETHER_PREFERRED_MODEL
+	) {
 		const preferredIndex = modelOptions.findIndex(
-			(opt) => opt.value === preferredModel
+			(opt) => opt.value === TOGETHER_PREFERRED_MODEL
 		);
-		if (preferredIndex > 0) {
+		if (preferredIndex >= 0) {
+			// Format the preferred model label
+			modelOptions[preferredIndex].label = PREFERRED_LABEL_FORMAT(
+				modelOptions[preferredIndex].value
+			);
+			// Move to top if no current, or second if current exists
+			const position = currentModel && currentModel !== 'undefined' ? 1 : 0;
 			const [preferred] = modelOptions.splice(preferredIndex, 1);
-			modelOptions.unshift(preferred);
+			modelOptions.splice(position, 0, preferred);
 		}
 	}
 
@@ -136,33 +152,31 @@ const handleSearch = async (
 		value: model,
 	}));
 
-	try {
-		const searchChoice = await select({
-			message: `Choose your model (filtered by "${searchTerm}"):`,
-			options: [
-				...searchOptions,
-				{ label: 'Custom model name...', value: 'custom' },
-			],
-		});
-		return searchChoice;
-	} catch {
-		return null;
-	}
+	const searchChoice = await select({
+		message: `Choose your model (filtered by "${searchTerm}"):`,
+		options: [
+			...searchOptions,
+			{ label: 'Custom model name...', value: 'custom' },
+		],
+	});
+
+	if (isCancel(searchChoice)) return null;
+
+	return searchChoice as string;
 };
 
 const handleCustom = async (text: any): Promise<string | null> => {
-	try {
-		const customModel = await text({
-			message: 'Enter your custom model name:',
-			validate: (value: string) => {
-				if (!value) return 'Model name is required';
-				return;
-			},
-		});
-		return customModel as string;
-	} catch {
-		return null;
-	}
+	const customModel = await text({
+		message: 'Enter your custom model name:',
+		validate: (value: string) => {
+			if (!value) return 'Model name is required';
+			return;
+		},
+	});
+
+	if (isCancel(customModel)) return null;
+
+	return customModel as string;
 };
 
 export const selectModel = async (
@@ -171,6 +185,14 @@ export const selectModel = async (
 	currentModel?: string,
 	providerDef?: ProviderDef
 ): Promise<string | null> => {
+	// For Together AI, default to preferred model if none set
+	if (
+		(!currentModel || currentModel === 'undefined') &&
+		providerDef?.name === 'togetherai'
+	) {
+		currentModel = TOGETHER_PREFERRED_MODEL;
+	}
+
 	const models = await fetchAndFilterModels(baseUrl, apiKey, providerDef);
 
 	let selectedModel: string | null = null;
@@ -178,25 +200,23 @@ export const selectModel = async (
 	if (models.length > 0) {
 		const { select, text, isCancel } = await import('@clack/prompts');
 
-		const modelOptions = prepareModelOptions(models, currentModel, providerDef);
+		let modelOptions = prepareModelOptions(models, currentModel, providerDef);
 
-		let modelChoice;
-		try {
-			modelChoice = await select({
-				message: 'Choose your model:',
-				options: [
-					{ label: '🔍 Search models...', value: 'search' },
-					...modelOptions,
-					{ label: 'Custom model name...', value: 'custom' },
-				],
-			});
-		} catch {
-			return null;
-		}
+		let modelChoice = await select({
+			message: 'Choose your model:',
+			options: [
+				{ label: '🔍 Search models...', value: 'search' },
+				...modelOptions,
+				{ label: 'Custom model name...', value: 'custom' },
+			],
+		});
+
+		if (isCancel(modelChoice)) return null;
 
 		if (modelChoice === 'search') {
-			modelChoice = await handleSearch(models, select, text, isCancel);
-			if (modelChoice === null) return null;
+			const searchChoice = await handleSearch(models, select, text, isCancel);
+			if (searchChoice === null) return null;
+			modelChoice = searchChoice;
 		}
 
 		if (modelChoice === 'custom') {

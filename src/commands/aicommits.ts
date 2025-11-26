@@ -14,10 +14,11 @@ import {
 	getStagedDiff,
 	getDetectedMessage,
 } from '../utils/git.js';
-import { getConfig } from '../utils/config-runtime.js';
+import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
+import { TOGETHER_PREFERRED_MODEL } from '../utils/constants.js';
 
 const getCommitMessage = async (
 	messages: string[],
@@ -124,6 +125,12 @@ export default async (
 
 		// Use the unified model setting or provider default
 		config.model = config.OPENAI_MODEL || providerInstance.getDefaultModel();
+
+		// For Together AI, fix undefined model
+		if (config.provider === 'togetherai' && config.model === 'undefined') {
+			config.model = TOGETHER_PREFERRED_MODEL;
+			await setConfigs([['OPENAI_MODEL', TOGETHER_PREFERRED_MODEL]]);
+		}
 
 		const s = spinner();
 		s.start('The AI is analyzing your changes');

@@ -86,6 +86,8 @@ export default command(
 
 				await provider.setup();
 
+				setupSuccessful = true; // Provider and API key configured
+
 				// Select model interactively
 				const { selectModel } = await import('../feature/models.js');
 				const selectedModel = await selectModel(
