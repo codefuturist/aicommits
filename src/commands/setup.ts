@@ -106,24 +106,31 @@ export default command(
 			}
 
 			// Save all config at once
-			const finalUpdates = Object.entries(config).filter(([k, v]) => k !== 'provider' && v !== undefined && v !== '' && typeof v === 'string') as [string, string][];
+			const finalUpdates = Object.entries(config).filter(
+				([k, v]) =>
+					k !== 'provider' &&
+					k !== 'model' &&
+					v !== undefined &&
+					v !== '' &&
+					typeof v === 'string'
+			) as [string, string][];
 			await setConfigs(finalUpdates);
 
 			outro(`✅ Setup complete! You're now using ${provider.displayName}.`);
 
-			// Offer to create git alias
-			const aliasChoice = await confirm({
-				message: 'Would you like to create a git alias "git ac" for "aicommits"?',
-			});
+			// // Offer to create git alias
+			// const aliasChoice = await confirm({
+			// 	message: 'Would you like to create a git alias "git ac" for "aicommits"?',
+			// });
 
-			if (aliasChoice) {
-				try {
-					execSync('git config --global alias.ac "!aicommits"', { stdio: 'inherit' });
-					console.log('✅ Git alias "git ac" created successfully.');
-				} catch (error) {
-					console.error(`❌ Failed to create git alias: ${(error as Error).message}`);
-				}
-			}
+			// if (aliasChoice) {
+			// 	try {
+			// 		execSync('git config --global alias.ac "!aicommits"', { stdio: 'inherit' });
+			// 		console.log('✅ Git alias "git ac" created successfully.');
+			// 	} catch (error) {
+			// 		console.error(`❌ Failed to create git alias: ${(error as Error).message}`);
+			// 	}
+			// }
 		})().catch((error) => {
 			console.error(`❌ Setup failed: ${error.message}`);
 			process.exit(1);

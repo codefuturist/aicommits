@@ -3,7 +3,7 @@ import { outro, log } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { selectModel } from '../feature/models.js';
-import { TOGETHER_PREFERRED_MODEL } from '../utils/constants.js';
+
 
 export default command(
 	{
@@ -69,13 +69,7 @@ export default command(
 				await setConfigs([['OPENAI_MODEL', selectedModel]]);
 				outro(`✅ Model updated to: ${selectedModel}`);
 			} else {
-				// If cancelled and no original model, set to preferred for Together AI
-				if (provider.name === 'togetherai' && (!originalCurrent || originalCurrent === 'undefined')) {
-					await setConfigs([['OPENAI_MODEL', TOGETHER_PREFERRED_MODEL]]);
-					outro(`✅ Model set to default: ${TOGETHER_PREFERRED_MODEL}`);
-				} else {
-					outro('Model selection cancelled');
-				}
+				outro('Model selection cancelled');
 			}
 		})().catch((error) => {
 			console.error(`❌ Model selection failed: ${error.message}`);

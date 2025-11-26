@@ -5,11 +5,7 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import type { ProviderDef } from './providers/base.js';
-import {
-	TOGETHER_PREFERRED_MODEL,
-	CURRENT_LABEL_FORMAT,
-	PREFERRED_LABEL_FORMAT,
-} from '../utils/constants.js';
+import { CURRENT_LABEL_FORMAT, PREFERRED_LABEL_FORMAT } from '../utils/constants.js';
 import { isCancel } from '@clack/prompts';
 import { fileExists } from '../utils/fs.js';
 
@@ -172,25 +168,7 @@ const prepareModelOptions = (
 		}
 	}
 
-	// For Together AI, highlight the preferred model if it's not the current
-	if (
-		providerDef?.name === 'togetherai' &&
-		currentModel !== TOGETHER_PREFERRED_MODEL
-	) {
-		const preferredIndex = modelOptions.findIndex(
-			(opt) => opt.value === TOGETHER_PREFERRED_MODEL
-		);
-		if (preferredIndex >= 0) {
-			// Format the preferred model label
-			modelOptions[preferredIndex].label = PREFERRED_LABEL_FORMAT(
-				modelOptions[preferredIndex].value
-			);
-			// Move to top if no current, or second if current exists
-			const position = currentModel && currentModel !== 'undefined' ? 1 : 0;
-			const [preferred] = modelOptions.splice(preferredIndex, 1);
-			modelOptions.splice(position, 0, preferred);
-		}
-	}
+
 
 	return modelOptions;
 };
@@ -256,12 +234,9 @@ export const selectModel = async (
 	currentModel?: string,
 	providerDef?: ProviderDef
 ): Promise<string | null> => {
-	// For Together AI, default to preferred model if none set
-	if (
-		(!currentModel || currentModel === 'undefined') &&
-		providerDef?.name === 'togetherai'
-	) {
-		currentModel = TOGETHER_PREFERRED_MODEL;
+	// Default to provider's default model if none set
+	if (!currentModel || currentModel === 'undefined') {
+		currentModel = providerDef?.defaultModel;
 	}
 
 	const models = await fetchAndFilterModels(baseUrl, apiKey, providerDef);

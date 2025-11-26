@@ -36,6 +36,7 @@ This will guide you through:
 
   - **TogetherAI** (recommended) - Get your API key from [TogetherAI](https://api.together.ai/)
   - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
+  - **OpenRouter** - Get your API key from [OpenRouter](https://openrouter.ai/keys)
   - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
   - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
 
