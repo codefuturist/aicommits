@@ -19,41 +19,7 @@ import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 import { TOGETHER_PREFERRED_MODEL } from '../utils/constants.js';
-
-
-
-const getCommitMessage = async (
-	messages: string[],
-	skipConfirm: boolean
-): Promise<string | null> => {
-	// Single message case
-	if (messages.length === 1) {
-		const [message] = messages;
-
-		if (skipConfirm) {
-			return message;
-		}
-
-		console.log(`\n\x1b[1m${message}\x1b[0m\n`);
-		const confirmed = await confirm({
-			message: 'Use this commit message?',
-		});
-
-		return confirmed && !isCancel(confirmed) ? message : null;
-	}
-
-	// Multiple messages case
-	if (skipConfirm) {
-		return messages[0];
-	}
-
-	const selected = await select({
-		message: `Pick a commit message to use: ${dim('(Ctrl+c to exit)')}`,
-		options: messages.map((value) => ({ label: value, value })),
-	});
-
-	return isCancel(selected) ? null : (selected as string);
-};
+import { retry, getCommitMessage } from '../utils/commit-helpers.js';
 
 export default async (
 	generate: number | undefined,
@@ -87,7 +53,7 @@ export default async (
 		}
 
 		detectingFiles.stop(
-			`${getDetectedMessage(staged.files)}:\n${staged.files
+			`📁 ${getDetectedMessage(staged.files)}:\n${staged.files
 				.map((file) => `     ${file}`)
 				.join('\n')}`
 		);
@@ -136,13 +102,13 @@ export default async (
 		}
 
 		const s = spinner();
-		s.start(`Analyzing changes in ${staged.files.length} file${staged.files.length === 1 ? '' : 's'}`);
+		s.start(`🔍 Analyzing changes in ${staged.files.length} file${staged.files.length === 1 ? '' : 's'}`);
 		const startTime = Date.now();
 		let messages: string[];
 		try {
 			const baseUrl = providerInstance.getBaseUrl();
 			const apiKey = providerInstance.getApiKey() || '';
-			messages = await generateCommitMessage(
+			messages = await retry(() => generateCommitMessage(
 				baseUrl,
 				apiKey,
 				config.model,
@@ -152,10 +118,10 @@ export default async (
 				config['max-length'],
 				config.type,
 				timeout
-			);
+			), 3, 2000);
 		} finally {
 			const duration = Date.now() - startTime;
-			s.stop(`Changes analyzed in ${duration}ms`);
+			s.stop(`✅ Changes analyzed in ${duration}ms`);
 		}
 
 		if (messages.length === 0) {
