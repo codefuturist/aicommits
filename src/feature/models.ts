@@ -1,5 +1,9 @@
 // Model filtering, fetching, and selection utilities
 import OpenAI from 'openai';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import crypto from 'crypto';
 import type { ProviderDef } from './providers/base.js';
 import {
 	TOGETHER_PREFERRED_MODEL,
@@ -7,6 +11,7 @@ import {
 	PREFERRED_LABEL_FORMAT,
 } from '../utils/constants.js';
 import { isCancel } from '@clack/prompts';
+import { fileExists } from '../utils/fs.js';
 
 interface ModelObject {
 	id?: string;
@@ -14,11 +19,73 @@ interface ModelObject {
 	type?: string;
 }
 
+interface CacheEntry {
+	data: { models: ModelObject[]; error?: string };
+	timestamp: number;
+}
+
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
+const getCacheDir = (): string => {
+	const platform = process.platform;
+	const home = os.homedir();
+
+	if (platform === 'darwin') {
+		return path.join(home, 'Library', 'Caches', 'aicommits', 'models');
+	} else if (platform === 'win32') {
+		return path.join(home, 'AppData', 'Local', 'aicommits', 'models');
+	} else {
+		// Linux/Unix
+		const xdgCache = process.env.XDG_CACHE_HOME;
+		const baseCache = xdgCache ? xdgCache : path.join(home, '.cache');
+		return path.join(baseCache, 'aicommits', 'models');
+	}
+};
+
+const getCacheKey = (baseUrl: string): string => {
+	const hash = crypto.createHash('sha256');
+	hash.update(baseUrl);
+	return hash.digest('hex');
+};
+
+const getCachePath = (key: string): string =>
+	path.join(getCacheDir(), `${key}.json`);
+
+const readCache = async (key: string): Promise<CacheEntry | null> => {
+	const cachePath = getCachePath(key);
+	try {
+		if (!(await fileExists(cachePath))) return null;
+		const data = await fs.readFile(cachePath, 'utf8');
+		return JSON.parse(data);
+	} catch {
+		return null;
+	}
+};
+
+const writeCache = async (key: string, entry: CacheEntry): Promise<void> => {
+	try {
+		const cacheDir = getCacheDir();
+		await fs.mkdir(cacheDir, { recursive: true });
+		const cachePath = getCachePath(key);
+		await fs.writeFile(cachePath, JSON.stringify(entry), 'utf8');
+	} catch {
+		// Ignore write errors
+	}
+};
+
 // Fetch models from API
 export const fetchModels = async (
 	baseUrl: string,
 	apiKey: string
 ): Promise<{ models: ModelObject[]; error?: string }> => {
+	const cacheKey = getCacheKey(baseUrl);
+	const now = Date.now();
+	const cached = await readCache(cacheKey);
+
+	if (cached && now - cached.timestamp < CACHE_DURATION) {
+		return cached.data;
+	}
+
 	try {
 		const openai = new OpenAI({
 			baseURL: baseUrl,
@@ -33,11 +100,15 @@ export const fetchModels = async (
 				? response.data
 				: ((response as any).body as OpenAI.Models.Model[]);
 
-		return { models: modelsArray };
+		const result = { models: modelsArray };
+		await writeCache(cacheKey, { data: result, timestamp: now });
+		return result;
 	} catch (error: unknown) {
 		const errorMessage =
 			error instanceof Error ? error.message : 'Request failed';
-		return { models: [], error: errorMessage };
+		const result = { models: [], error: errorMessage };
+		await writeCache(cacheKey, { data: result, timestamp: now });
+		return result;
 	}
 };
 
