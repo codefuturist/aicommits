@@ -104,7 +104,7 @@ export type ValidConfig = {
 	OPENAI_API_KEY: string | undefined;
 	OPENAI_BASE_URL: string | undefined;
 	OPENAI_MODEL: string;
-	model: string | undefined;
+	model: string;
 	provider: string | undefined;
 	timeout: number | undefined;
 };

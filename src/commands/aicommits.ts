@@ -111,7 +111,7 @@ export default async (
 			messages = await retry(() => generateCommitMessage(
 				baseUrl,
 				apiKey,
-				config.model,
+				config.model!,
 				config.locale,
 				staged.diff,
 				config.generate,

@@ -90,7 +90,7 @@ export const getConfig = async (
 
 	provider = detectProvider(baseUrl, apiKey);
 
-	return { ...parsedConfig, provider } as ValidConfig;
+	return { ...parsedConfig, model: parsedConfig.OPENAI_MODEL, provider } as ValidConfig;
 };
 
 export const setConfigs = async (keyValues: [key: string, value: string][]) => {
