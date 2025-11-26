@@ -33,7 +33,7 @@ export class Provider {
 		return this.def;
 	}
 
-	async setup(): Promise<void> {
+	async setup(): Promise<[string, string][]> {
 		const { text, password } = await import('@clack/prompts');
 		const updates: [string, string][] = [];
 
@@ -73,10 +73,7 @@ export class Provider {
 			}
 		}
 
-		if (updates.length > 0) {
-			await setConfigs(updates);
-			this.config = await getConfig();
-		}
+		return updates;
 	}
 
 	async getModels(): Promise<{ models: string[]; error?: string }> {
