@@ -74,6 +74,13 @@ export default command(
 				config[k] = v;
 			}
 
+			// Validate configuration
+			const validation = provider.validateConfig();
+			if (!validation.valid) {
+				outro(`Setup cancelled: ${validation.errors.join(', ')}`);
+				return;
+			}
+
 			// Select model interactively
 			const { selectModel } = await import('../feature/models.js');
 			const selectedModel = await selectModel(
