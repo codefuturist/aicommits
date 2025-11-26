@@ -9,9 +9,13 @@ import setupCommand from './commands/setup.js';
 import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 
-const notifier = updateNotifier({ pkg });
+const notifier = updateNotifier({
+	pkg,
+	distTag: version.includes('-') ? 'develop' : 'latest',
+});
+
 if (version !== '0.0.0-semantic-release' && version.includes('-')) {
-  notifier.notify();
+	notifier.notify();
 }
 
 const rawArgv = process.argv.slice(2);
@@ -46,18 +50,21 @@ cli(
 			},
 			type: {
 				type: String,
-				description: 'Git commit message format (default: conventional). Supports conventional and gitmoji',
+				description:
+					'Git commit message format (default: conventional). Supports conventional and gitmoji',
 				alias: 't',
 			},
 			confirm: {
 				type: Boolean,
-				description: 'Skip confirmation when committing after message generation (default: false)',
+				description:
+					'Skip confirmation when committing after message generation (default: false)',
 				alias: 'y',
 				default: false,
 			},
 			clipboard: {
 				type: Boolean,
-				description: 'Copy the selected message to the clipboard instead of committing (default: false)',
+				description:
+					'Copy the selected message to the clipboard instead of committing (default: false)',
 				alias: 'c',
 				default: false,
 			},
