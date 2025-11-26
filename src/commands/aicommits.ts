@@ -32,8 +32,9 @@ const getCommitMessage = async (
 			return message;
 		}
 
+		console.log(`\n${green('📝 Suggested commit message:')}\n${message}\n`);
 		const confirmed = await confirm({
-			message: `Use this commit message?\n\n   ${message}\n`,
+			message: 'Use this commit message?',
 		});
 
 		return confirmed && !isCancel(confirmed) ? message : null;
@@ -133,7 +134,7 @@ export default async (
 		}
 
 		const s = spinner();
-		s.start('The AI is analyzing your changes');
+		s.start(`Analyzing changes in ${staged.files.length} file${staged.files.length === 1 ? '' : 's'}`);
 		const startTime = Date.now();
 		let messages: string[];
 		try {
