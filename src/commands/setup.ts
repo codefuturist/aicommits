@@ -1,5 +1,6 @@
+import { execSync } from 'child_process';
 import { command } from 'cleye';
-import { select, text, outro, isCancel } from '@clack/prompts';
+import { select, text, outro, isCancel, confirm } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import {
 	getProvider,
@@ -63,7 +64,7 @@ export default command(
 			config.OPENAI_MODEL = '';
 
 			// Get provider instance
-			const provider = getProvider({ ...config, provider: providerChoice });
+			let provider = getProvider({ ...config, provider: providerChoice });
 			if (!provider) {
 				outro('Invalid provider selected');
 				return;
@@ -71,7 +72,14 @@ export default command(
 
 			const apiUpdates = await provider.setup();
 			for (const [k, v] of apiUpdates) {
-				config[k] = v;
+				(config as any)[k] = v;
+			}
+
+			// Recreate provider with updated config for validation
+			provider = getProvider({ ...config, provider: providerChoice });
+			if (!provider) {
+				outro('Invalid provider selected');
+				return;
 			}
 
 			// Validate configuration
@@ -98,10 +106,24 @@ export default command(
 			}
 
 			// Save all config at once
-			const finalUpdates = Object.entries(config).filter(([k, v]) => v !== undefined && v !== '');
+			const finalUpdates = Object.entries(config).filter(([k, v]) => k !== 'provider' && v !== undefined && v !== '' && typeof v === 'string') as [string, string][];
 			await setConfigs(finalUpdates);
 
 			outro(`✅ Setup complete! You're now using ${provider.displayName}.`);
+
+			// Offer to create git alias
+			const aliasChoice = await confirm({
+				message: 'Would you like to create a git alias "git ac" for "aicommits"?',
+			});
+
+			if (aliasChoice) {
+				try {
+					execSync('git config --global alias.ac "!aicommits"', { stdio: 'inherit' });
+					console.log('✅ Git alias "git ac" created successfully.');
+				} catch (error) {
+					console.error(`❌ Failed to create git alias: ${(error as Error).message}`);
+				}
+			}
 		})().catch((error) => {
 			console.error(`❌ Setup failed: ${error.message}`);
 			process.exit(1);
