@@ -124,8 +124,14 @@ export default async (
 			usage = result.usage;
 		} finally {
 			const duration = Date.now() - startTime;
-			const tokens = usage?.total_tokens ? `, ${usage.total_tokens} tokens` : '';
-			s.stop(`✅ Changes analyzed in ${(duration / 1000).toFixed(1)}s${tokens}`);
+			let tokensStr = '';
+			if (usage?.total_tokens) {
+				const tokens = usage.total_tokens;
+				const formattedTokens = tokens >= 1000 ? `${(tokens / 1000).toFixed(0)}k` : tokens.toString();
+				const speed = Math.round(tokens / (duration / 1000));
+				tokensStr = `, ${formattedTokens} tokens (${speed} tokens/s)`;
+			}
+			s.stop(`✅ Changes analyzed in ${(duration / 1000).toFixed(1)}s${tokensStr}`);
 		}
 
 		if (messages.length === 0) {
