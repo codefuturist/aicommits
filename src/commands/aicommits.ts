@@ -101,10 +101,11 @@ export default async (
 		s.start(`🔍 Analyzing changes in ${staged.files.length} file${staged.files.length === 1 ? '' : 's'}`);
 		const startTime = Date.now();
 		let messages: string[];
+		let usage: any;
 		try {
 			const baseUrl = providerInstance.getBaseUrl();
 			const apiKey = providerInstance.getApiKey() || '';
-			messages = await retry(() => generateCommitMessage(
+			const result = await retry(() => generateCommitMessage(
 				baseUrl,
 				apiKey,
 				config.model!,
@@ -115,9 +116,12 @@ export default async (
 				config.type,
 				timeout
 			), 3, 2000);
+			messages = result.messages;
+			usage = result.usage;
 		} finally {
 			const duration = Date.now() - startTime;
-			s.stop(`✅ Changes analyzed in ${duration}ms`);
+			const tokens = usage?.total_tokens ? `, ${usage.total_tokens} tokens` : '';
+			s.stop(`✅ Changes analyzed in ${(duration / 1000).toFixed(1)}s${tokens}`);
 		}
 
 		if (messages.length === 0) {

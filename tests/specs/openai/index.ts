@@ -138,7 +138,7 @@ export default testSuite(({ describe }) => {
 				'max-length': 50,
 				...configOverrides,
 			} as ValidConfig;
-			const commitMessages = await generateCommitMessage(
+			const { messages: commitMessages } = await generateCommitMessage(
 				'api.openai.com',
 				OPENAI_API_KEY!,
 				'gpt-3.5-turbo',

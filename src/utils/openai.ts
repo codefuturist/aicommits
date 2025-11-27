@@ -78,11 +78,12 @@ export const generateCommitMessage = async (
 		const validChoices = (completion as ChatCompletion).choices.filter(
 			(choice: ChatCompletion.Choice) => choice.message?.content
 		);
-		return deduplicateMessages(
+		const messages = deduplicateMessages(
 			validChoices.map((choice: ChatCompletion.Choice) =>
 				sanitizeMessage(choice.message.content ?? '', maxLength)
 			)
 		);
+		return { messages, usage: (completion as ChatCompletion).usage };
 	} catch (error) {
 		const errorAsAny = error as any;
 		if (errorAsAny.code === 'ENOTFOUND') {

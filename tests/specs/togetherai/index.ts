@@ -57,7 +57,7 @@ export default testSuite(({ describe }) => {
 				'max-length': 72,
 				...configOverrides,
 			} as ValidConfig;
-			const commitMessages = await generateCommitMessage(
+			const { messages: commitMessages } = await generateCommitMessage(
 				'https://api.together.xyz',
 				TOGETHER_API_KEY!,
 				'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',

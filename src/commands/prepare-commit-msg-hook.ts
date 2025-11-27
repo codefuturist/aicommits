@@ -56,7 +56,7 @@ export default () =>
 		s.start('The AI is analyzing your changes');
 		let messages: string[];
 		try {
-			messages = await generateCommitMessage(
+			const result = await generateCommitMessage(
 				baseUrl,
 				apiKey,
 				model,
@@ -67,6 +67,7 @@ export default () =>
 				config.type,
 				timeout
 			);
+			messages = result.messages;
 		} finally {
 			s.stop('Changes analyzed');
 		}
