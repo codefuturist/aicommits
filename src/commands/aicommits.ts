@@ -52,11 +52,15 @@ export default async (
 			);
 		}
 
-		detectingFiles.stop(
-			`📁 ${getDetectedMessage(staged.files)}:\n${staged.files
-				.map((file) => `     ${file}`)
-				.join('\n')}`
-		);
+		if (staged.files.length <= 10) {
+			detectingFiles.stop(
+				`📁 ${getDetectedMessage(staged.files)}:\n${staged.files
+					.map((file) => `     ${file}`)
+					.join('\n')}`
+			);
+		} else {
+			detectingFiles.stop(`📁 ${getDetectedMessage(staged.files)}`);
+		}
 
 		const { env } = process;
 		const config = await getConfig({
