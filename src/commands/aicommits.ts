@@ -19,7 +19,7 @@ import { getProvider } from '../feature/providers/index.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 
-import { retry, getCommitMessage } from '../utils/commit-helpers.js';
+import { getCommitMessage } from '../utils/commit-helpers.js';
 
 export default async (
 	generate: number | undefined,
@@ -105,7 +105,7 @@ export default async (
 		try {
 			const baseUrl = providerInstance.getBaseUrl();
 			const apiKey = providerInstance.getApiKey() || '';
-			const result = await retry(() => generateCommitMessage(
+			const result = await generateCommitMessage(
 				baseUrl,
 				apiKey,
 				config.model!,
@@ -115,7 +115,7 @@ export default async (
 				config['max-length'],
 				config.type,
 				timeout
-			), 3, 2000);
+			);
 			messages = result.messages;
 			usage = result.usage;
 		} finally {

@@ -1,6 +1,6 @@
 import { KnownError } from './error.js';
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const retry = async <T>(fn: () => Promise<T>, attempts: number = 3, delay: number = 1000): Promise<T> => {
 	for (let i = 0; i < attempts; i++) {
