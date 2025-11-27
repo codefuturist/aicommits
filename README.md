@@ -316,7 +316,9 @@ Video coming soon where I rebuild it from scratch to show you how to easily buil
 
 ## Maintainers
 
-- **Hassan El Mghari**: [@Nutlope](https://github.com/Nutlope) [<img src="https://img.shields.io/twitter/follow/nutlope?style=flat&label=nutlope&logo=twitter&color=0bf&logoColor=fff" align="center">](https://twitter.com/nutlope)
+- **Hassan El Mghari**: [@Nutlope](https://github.com/Nutlope) [<img src="https://img.shields.io/twitter/follow/nutlope?style=flat&label=nutlope&logo=twitter&color=0bf&logoColor=fff" align="center">](https://x.com/nutlope)
+
+- **Riccardo Giorato**: [@riccardogiorato](https://github.com/riccardogiorato) [<img src="https://img.shields.io/twitter/follow/riccardogiorato?style=flat&label=riccardogiorato&logo=twitter&color=0bf&logoColor=fff" align="center">](https://x.com/riccardogiorato)
 
 - **Hiroki Osame**: [@privatenumber](https://github.com/privatenumber) [<img src="https://img.shields.io/twitter/follow/privatenumbr?style=flat&label=privatenumbr&logo=twitter&color=0bf&logoColor=fff" align="center">](https://twitter.com/privatenumbr)
 
