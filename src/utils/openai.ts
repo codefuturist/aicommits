@@ -49,12 +49,11 @@ export const generateCommitMessage = async (
 
 		const promises = Array.from({ length: completions }, () =>
 			generateText({
-				model: provider(model) as any,
+				model: provider(model),
 				system: generatePrompt(locale, maxLength, type),
 				prompt: diff,
 				temperature: 0.4,
 				maxRetries: 2,
-				abortSignal: abortController.signal,
 			}).finally(() => clearTimeout(timeoutId))
 		);
 		const results = await Promise.all(promises);
