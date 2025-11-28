@@ -8,7 +8,7 @@ import {
 	CURRENT_LABEL_FORMAT,
 	PREFERRED_LABEL_FORMAT,
 } from '../utils/constants.js';
-import { isCancel } from '@clack/prompts';
+import { isCancel, spinner } from '@clack/prompts';
 import { fileExists } from '../utils/fs.js';
 
 interface ModelObject {
@@ -120,7 +120,6 @@ const fetchAndFilterModels = async (
 	providerDef?: ProviderDef
 ): Promise<string[]> => {
 	// Fetch models
-	console.log('Fetching available models...');
 	const result = await fetchModels(baseUrl, apiKey);
 
 	if (result.error) {
@@ -242,7 +241,10 @@ export const selectModel = async (
 		currentModel = providerDef?.defaultModel;
 	}
 
+	const s = spinner();
+	s.start('Fetching available models...');
 	const models = await fetchAndFilterModels(baseUrl, apiKey, providerDef);
+	s.stop();
 
 	let selectedModel: string | null = null;
 
@@ -258,6 +260,7 @@ export const selectModel = async (
 				...modelOptions,
 				{ label: 'Custom model name...', value: 'custom' },
 			],
+			initialValue: modelOptions.length > 0 ? modelOptions[0].value : undefined,
 		});
 
 		if (isCancel(modelChoice)) return null;

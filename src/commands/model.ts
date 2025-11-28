@@ -4,7 +4,6 @@ import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { selectModel } from '../feature/models.js';
 
-
 export default command(
 	{
 		name: 'model',
@@ -42,8 +41,6 @@ export default command(
 						: 'not set'
 				}`
 			);
-
-			const originalCurrent = currentModel;
 
 			// Validate provider config
 			const validation = provider.validateConfig();
