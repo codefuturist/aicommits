@@ -1,5 +1,6 @@
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
 import { generatePrompt } from './prompt.js';
@@ -39,7 +40,15 @@ export const generateCommitMessage = async (
 
 	for (let i = 0; i < attempts; i++) {
 		try {
-			const provider = createOpenAI({ baseURL: baseUrl, apiKey });
+			const provider =
+				baseUrl === 'https://api.openai.com/v1'
+					? createOpenAI({ apiKey })
+					: createOpenAICompatible({
+							name: 'custom',
+							apiKey,
+							baseURL: baseUrl,
+					  });
+
 			const promises = Array.from({ length: completions }, () =>
 				generateText({
 					model: provider(model),

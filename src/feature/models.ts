@@ -4,7 +4,10 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import type { ProviderDef } from './providers/base.js';
-import { CURRENT_LABEL_FORMAT, PREFERRED_LABEL_FORMAT } from '../utils/constants.js';
+import {
+	CURRENT_LABEL_FORMAT,
+	PREFERRED_LABEL_FORMAT,
+} from '../utils/constants.js';
 import { isCancel } from '@clack/prompts';
 import { fileExists } from '../utils/fs.js';
 
@@ -82,9 +85,9 @@ export const fetchModels = async (
 	}
 
 	try {
-		const response = await fetch(`${baseUrl}/v1/models`, {
+		const response = await fetch(`${baseUrl}/models`, {
 			headers: {
-				'Authorization': `Bearer ${apiKey}`,
+				Authorization: `Bearer ${apiKey}`,
 			},
 		});
 
@@ -94,17 +97,18 @@ export const fetchModels = async (
 
 		const data = await response.json();
 
-		// we do this since Together API for openai models has different response than standard
-		const modelsArray: ModelObject[] = data.data || [];
+		// we do this since Together API for openai models has different response than standard needing just data, other apis data.data
+		const modelsArray: ModelObject[] = (data.data ? data.data : data) || [];
 
 		const result = { models: modelsArray };
-		await writeCache(cacheKey, { data: result, timestamp: now });
+		if (modelsArray.length > 0) {
+			await writeCache(cacheKey, { data: result, timestamp: now });
+		}
 		return result;
 	} catch (error: unknown) {
 		const errorMessage =
 			error instanceof Error ? error.message : 'Request failed';
 		const result = { models: [], error: errorMessage };
-		await writeCache(cacheKey, { data: result, timestamp: now });
 		return result;
 	}
 };
@@ -168,8 +172,6 @@ const prepareModelOptions = (
 			});
 		}
 	}
-
-
 
 	return modelOptions;
 };
