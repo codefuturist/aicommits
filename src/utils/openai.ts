@@ -1,28 +1,9 @@
-import OpenAI from 'openai';
-import type {
-	ChatCompletionCreateParams,
-	ChatCompletion,
-} from 'openai/resources/chat/completions';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
 import { generatePrompt } from './prompt.js';
 import { sleep } from './commit-helpers.js';
-
-const createChatCompletion = async (
-	baseUrl: string,
-	apiKey: string,
-	json: ChatCompletionCreateParams,
-	timeout: number
-) => {
-	const openai = new OpenAI({
-		baseURL: baseUrl,
-		apiKey,
-		timeout,
-	});
-
-	const completion = await openai.chat.completions.create(json);
-	return completion;
-};
 
 const sanitizeMessage = (message: string, maxLength: number) => {
 	let sanitized = message
@@ -58,38 +39,35 @@ export const generateCommitMessage = async (
 
 	for (let i = 0; i < attempts; i++) {
 		try {
-			const completion = await createChatCompletion(
-				baseUrl,
-				apiKey,
-				{
-					model,
-					messages: [
-						{
-							role: 'system',
-							content: generatePrompt(locale, maxLength, type),
-						},
-						{
-							role: 'user',
-							content: diff,
-						},
-					],
+			const provider = createOpenAI({ baseURL: baseUrl, apiKey });
+			const promises = Array.from({ length: completions }, () =>
+				generateText({
+					model: provider(model),
+					system: generatePrompt(locale, maxLength, type),
+					prompt: diff,
 					temperature: 0.4,
-					max_tokens: 100,
-					stream: false,
-					n: completions,
-				},
-				timeout
+				})
 			);
-
-			const validChoices = (completion as ChatCompletion).choices.filter(
-				(choice: ChatCompletion.Choice) => choice.message?.content
-			);
+			const results = await Promise.all(promises);
+			const texts = results.map((r) => r.text);
 			const messages = deduplicateMessages(
-				validChoices.map((choice: ChatCompletion.Choice) =>
-					sanitizeMessage(choice.message.content ?? '', maxLength)
-				)
+				texts.map((text: string) => sanitizeMessage(text, maxLength))
 			);
-			return { messages, usage: (completion as ChatCompletion).usage };
+			const usage = {
+				prompt_tokens: results.reduce(
+					(sum, r) => sum + ((r.usage as any).promptTokens || 0),
+					0
+				),
+				completion_tokens: results.reduce(
+					(sum, r) => sum + ((r.usage as any).completionTokens || 0),
+					0
+				),
+				total_tokens: results.reduce(
+					(sum, r) => sum + ((r.usage as any).totalTokens || 0),
+					0
+				),
+			};
+			return { messages, usage };
 		} catch (error) {
 			const errorAsAny = error as any;
 
