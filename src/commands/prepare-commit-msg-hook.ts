@@ -34,20 +34,27 @@ export default () =>
 
 		const providerInstance = getProvider(config);
 		if (!providerInstance) {
-			throw new KnownError('Invalid provider configuration. Run `aicommits setup` to reconfigure.');
+			throw new KnownError(
+				'Invalid provider configuration. Run `aicommits setup` to reconfigure.'
+			);
 		}
 
 		// Validate provider config
 		const validation = providerInstance.validateConfig();
 		if (!validation.valid) {
-			throw new KnownError(`Provider configuration issues: ${validation.errors.join(', ')}. Run \`aicommits setup\` to reconfigure.`);
+			throw new KnownError(
+				`Provider configuration issues: ${validation.errors.join(
+					', '
+				)}. Run \`aicommits setup\` to reconfigure.`
+			);
 		}
 
 		const baseUrl = providerInstance.getBaseUrl();
 		const apiKey = providerInstance.getApiKey() || '';
 
 		// Use config timeout, or default per provider
-		const timeout = config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
+		const timeout =
+			config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
 
 		// Use the unified model or provider default
 		let model = config.OPENAI_MODEL || providerInstance.getDefaultModel();
@@ -93,7 +100,7 @@ export default () =>
 		if (hasMultipleMessages) {
 			if (supportsComments) {
 				instructions +=
-					'# Select one of the following messages by uncommeting:\n';
+					'# Select one of the following messages by uncommenting:\n';
 			}
 			instructions += `\n${messages
 				.map((message) => `# ${message}`)
@@ -105,6 +112,9 @@ export default () =>
 			instructions += `\n${messages[0]}\n`;
 		}
 
-		await fs.appendFile(messageFilePath, instructions);
+		const currentContent = await fs.readFile(messageFilePath, 'utf8');
+		const newContent = instructions + '\n' + currentContent;
+		await fs.writeFile(messageFilePath, newContent);
+
 		outro(`${green('✔')} Saved commit message!`);
 	})().catch(handleCommandError);
