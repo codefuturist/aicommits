@@ -19,6 +19,6 @@ export const OpenAiProvider: ProviderDef = {
 						m.type === 'chat')
 			)
 			.map((m: any) => m.id),
-	defaultModel: 'gpt-4o',
+	defaultModel: 'gpt-4o-mini',
 	requiresApiKey: true,
 };

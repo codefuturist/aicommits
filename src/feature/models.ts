@@ -1,12 +1,14 @@
 // Model filtering, fetching, and selection utilities
-import OpenAI from 'openai';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import type { ProviderDef } from './providers/base.js';
-import { CURRENT_LABEL_FORMAT, PREFERRED_LABEL_FORMAT } from '../utils/constants.js';
-import { isCancel } from '@clack/prompts';
+import {
+	CURRENT_LABEL_FORMAT,
+	PREFERRED_LABEL_FORMAT,
+} from '../utils/constants.js';
+import { isCancel, spinner } from '@clack/prompts';
 import { fileExists } from '../utils/fs.js';
 
 interface ModelObject {
@@ -83,27 +85,30 @@ export const fetchModels = async (
 	}
 
 	try {
-		const openai = new OpenAI({
-			baseURL: baseUrl,
-			apiKey,
+		const response = await fetch(`${baseUrl}/models`, {
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+			},
 		});
 
-		const response = await openai.models.list();
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		}
 
-		// we do this since Together API for openai models has different response than standard
-		const modelsArray: ModelObject[] =
-			response.data.length > 0
-				? response.data
-				: ((response as any).body as OpenAI.Models.Model[]);
+		const data = await response.json();
+
+		// we do this since Together API for openai models has different response than standard needing just data, other apis data.data
+		const modelsArray: ModelObject[] = (data.data ? data.data : data) || [];
 
 		const result = { models: modelsArray };
-		await writeCache(cacheKey, { data: result, timestamp: now });
+		if (modelsArray.length > 0) {
+			await writeCache(cacheKey, { data: result, timestamp: now });
+		}
 		return result;
 	} catch (error: unknown) {
 		const errorMessage =
 			error instanceof Error ? error.message : 'Request failed';
 		const result = { models: [], error: errorMessage };
-		await writeCache(cacheKey, { data: result, timestamp: now });
 		return result;
 	}
 };
@@ -115,7 +120,6 @@ const fetchAndFilterModels = async (
 	providerDef?: ProviderDef
 ): Promise<string[]> => {
 	// Fetch models
-	console.log('Fetching available models...');
 	const result = await fetchModels(baseUrl, apiKey);
 
 	if (result.error) {
@@ -167,8 +171,6 @@ const prepareModelOptions = (
 			});
 		}
 	}
-
-
 
 	return modelOptions;
 };
@@ -239,7 +241,10 @@ export const selectModel = async (
 		currentModel = providerDef?.defaultModel;
 	}
 
+	const s = spinner();
+	s.start('Fetching available models...');
 	const models = await fetchAndFilterModels(baseUrl, apiKey, providerDef);
+	s.stop();
 
 	let selectedModel: string | null = null;
 
@@ -255,6 +260,7 @@ export const selectModel = async (
 				...modelOptions,
 				{ label: 'Custom model name...', value: 'custom' },
 			],
+			initialValue: modelOptions.length > 0 ? modelOptions[0].value : undefined,
 		});
 
 		if (isCancel(modelChoice)) return null;

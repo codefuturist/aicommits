@@ -39,7 +39,9 @@
 		"ini": "^3.0.1",
 		"kolorist": "^1.8.0",
 		"manten": "^0.7.0",
-		"openai": "^6.9.0",
+		"ai": "^5.0.104",
+		"@ai-sdk/openai": "^2.0.74",
+		"@ai-sdk/openai-compatible": "^1.0.28",
 		"pkgroll": "^2.20.1",
 		"tsx": "^4.20.6",
 		"typescript": "^5.9.3"
