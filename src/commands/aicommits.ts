@@ -148,7 +148,11 @@ export default async (
 		// Handle clipboard mode (early return)
 		if (copyToClipboard) {
 			try {
-				await clipboard.write(message);
+				if (process.platform === 'darwin') {
+					await execa('pbcopy', { input: message });
+				} else {
+					await clipboard.write(message);
+				}
 				outro(`${green('✔')} Message copied to clipboard`);
 			} catch (error: unknown) {
 				// Silently fail if clipboard is not available
