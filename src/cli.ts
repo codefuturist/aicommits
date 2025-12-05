@@ -8,6 +8,7 @@ import configCommand from './commands/config.js';
 import setupCommand from './commands/setup.js';
 import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
+import prCommand from './commands/pr.js';
 
 const notifier = updateNotifier({
 	pkg,
@@ -75,7 +76,7 @@ cli(
 			},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand],
 
 		help: {
 			description,
