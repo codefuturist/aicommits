@@ -8,6 +8,6 @@ export const OpenAiCustom: ProviderDef = {
 		models
 			.filter((m: any) => !m.type || m.type === 'chat' || m.type === 'language')
 			.map((m: any) => m.id),
-	defaultModel: '',
+	defaultModels: [],
 	requiresApiKey: true,
 };

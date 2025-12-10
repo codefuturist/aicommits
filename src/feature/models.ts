@@ -4,10 +4,7 @@ import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import type { ProviderDef } from './providers/base.js';
-import {
-	CURRENT_LABEL_FORMAT,
-	PREFERRED_LABEL_FORMAT,
-} from '../utils/constants.js';
+import { CURRENT_LABEL_FORMAT } from '../utils/constants.js';
 import { isCancel, spinner } from '@clack/prompts';
 import { fileExists } from '../utils/fs.js';
 
@@ -149,23 +146,50 @@ const prepareModelOptions = (
 		value: model,
 	}));
 
-	// Move current model to the top if it exists
+	// Move highlighted models to the top
+	if (providerDef?.defaultModels && providerDef.defaultModels.length > 0) {
+		const highlightedModels = providerDef.defaultModels.filter(model => 
+			modelOptions.some(opt => opt.value === model)
+		);
+		
+		// Remove highlighted models from their current positions
+		highlightedModels.forEach(model => {
+			const index = modelOptions.findIndex(opt => opt.value === model);
+			if (index >= 0) {
+				modelOptions.splice(index, 1);
+			}
+		});
+		
+		// Add highlighted models at the beginning with special labels
+		highlightedModels.forEach((model, index) => {
+			const isDefault = index === 0;
+			const label = isDefault ? `⭐ ${model} (default)` : `🔥 ${model}`;
+			modelOptions.unshift({ label, value: model });
+		});
+	}
+
+	// Move current model to the top if it exists and isn't already highlighted
 	if (currentModel && currentModel !== 'undefined') {
+		const isHighlighted = providerDef?.defaultModels?.includes(currentModel);
 		const currentIndex = modelOptions.findIndex(
 			(opt) => opt.value === currentModel
 		);
-		if (currentIndex >= 0) {
-			// Mark as current and move to top
+		
+		if (currentIndex >= 0 && !isHighlighted) {
+			// Mark as current and move to top (after highlighted models)
 			modelOptions[currentIndex].label = CURRENT_LABEL_FORMAT(
 				modelOptions[currentIndex].value
 			);
 			if (currentIndex > 0) {
 				const [current] = modelOptions.splice(currentIndex, 1);
-				modelOptions.unshift(current);
+				// Find position after highlighted models
+				const highlightedCount = providerDef?.defaultModels?.length || 0;
+				modelOptions.splice(highlightedCount, 0, current);
 			}
-		} else {
-			// Current model not in fetched list, add it at the top
-			modelOptions.unshift({
+		} else if (currentIndex < 0 && !isHighlighted) {
+			// Current model not in fetched list, add it after highlighted models
+			const highlightedCount = providerDef?.defaultModels?.length || 0;
+			modelOptions.splice(highlightedCount, 0, {
 				label: CURRENT_LABEL_FORMAT(currentModel),
 				value: currentModel,
 			});
@@ -238,7 +262,7 @@ export const selectModel = async (
 ): Promise<string | null> => {
 	// Default to provider's default model if none set
 	if (!currentModel || currentModel === 'undefined') {
-		currentModel = providerDef?.defaultModel;
+		currentModel = providerDef?.defaultModels?.[0];
 	}
 
 	const s = spinner();

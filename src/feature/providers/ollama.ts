@@ -6,6 +6,6 @@ export const OllamaProvider: ProviderDef = {
 	baseUrl: 'http://localhost:11434/v1',
 	modelsFilter: (models) =>
 		models.filter((m: any) => m.name).map((m: any) => m.name),
-	defaultModel: 'llama2',
+	defaultModels: ['gpt-oss:latest', 'llama3.2:latest'],
 	requiresApiKey: false,
 };

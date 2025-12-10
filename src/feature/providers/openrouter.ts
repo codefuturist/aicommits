@@ -9,6 +9,6 @@ export const OpenRouterProvider: ProviderDef = {
 		models
 			.filter((m: any) => m.id && (!m.type || m.type === 'chat'))
 			.map((m: any) => m.id),
-	defaultModel: 'x-ai/grok-4.1-fast:free',
+	defaultModels: ['openai/gpt-oss-20b:free', 'z-ai/glm-4.5-air:free'],
 	requiresApiKey: true,
 };
