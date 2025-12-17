@@ -3,15 +3,16 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
-import { generatePrompt } from './prompt.js';
+import { generatePrompt, commitTypeFormats } from './prompt.js';
 
 const sanitizeMessage = (message: string, maxLength: number) => {
-	let sanitized = message
-		.trim()
-		.split('\n')[0] // Take only the first line
-		.replace(/(\w)\.$/, '$1')
-		.replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes
-		.substring(0, maxLength);
+ 	let sanitized = message
+ 		.trim()
+ 		.split('\n')[0] // Take only the first line
+ 		.replace(/(\w)\.$/, '$1')
+ 		.replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes
+ 		.replace(/^<[^>]*>\s*/, '') // Remove leading tags
+ 		.substring(0, maxLength);
 
 	return sanitized;
 };
@@ -111,6 +112,58 @@ export const generateCommitMessage = async (
 			}
 			throw new KnownError(message);
 		}
+
+		throw errorAsAny;
+	}
+};
+
+export const combineCommitMessages = async (
+	messages: string[],
+	baseUrl: string,
+	apiKey: string,
+	model: string,
+	locale: string,
+	maxLength: number,
+	type: CommitType,
+	timeout: number
+) => {
+	try {
+		const provider =
+			baseUrl === 'https://api.openai.com/v1'
+				? createOpenAI({ apiKey })
+				: createOpenAICompatible({
+						name: 'custom',
+						apiKey,
+						baseURL: baseUrl,
+				  });
+
+		const abortController = new AbortController();
+		const timeoutId = setTimeout(() => abortController.abort(), timeout);
+
+		const system = `You are a tool that generates git commit messages. Your task is to combine multiple commit messages into one.
+
+Input: Several commit messages separated by newlines.
+Output: A single commit message starting with type like 'feat:' or 'fix:'.
+
+Do not add thanks, explanations, or any text outside the commit message.`;
+
+		const result = await generateText({
+			model: provider(model),
+			system,
+			prompt: messages.join('\n'),
+			temperature: 0.4,
+			maxRetries: 2,
+		});
+
+		clearTimeout(timeoutId);
+
+		const combinedMessage = sanitizeMessage(result.text, maxLength);
+
+		return { messages: [combinedMessage], usage: result.usage };
+	} catch (error) {
+		const errorAsAny = error as any;
+
+		console.log(errorAsAny);
 
 		throw errorAsAny;
 	}

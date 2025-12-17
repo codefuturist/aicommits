@@ -1,6 +1,6 @@
 import type { CommitType } from './config-types.js';
 
-const commitTypeFormats: Record<CommitType, string> = {
+export const commitTypeFormats: Record<CommitType, string> = {
 	'': '<commit message>',
 	conventional: '<type>[optional (<scope>)]: <commit message>',
 	gitmoji: ':emoji: <commit message>',

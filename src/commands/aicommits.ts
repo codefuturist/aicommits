@@ -12,11 +12,12 @@ import {
 import {
 	assertGitRepo,
 	getStagedDiff,
+	getStagedDiffForFiles,
 	getDetectedMessage,
 } from '../utils/git.js';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
-import { generateCommitMessage } from '../utils/openai.js';
+import { generateCommitMessage, combineCommitMessages } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 
 import { getCommitMessage } from '../utils/commit-helpers.js';
@@ -99,7 +100,13 @@ export default async (
 		// Use the unified model setting or provider default
 		config.model = config.OPENAI_MODEL || providerInstance.getDefaultModel();
 
-
+		// Check if diff is large and needs chunking
+		const MAX_FILES = 50;
+		const CHUNK_SIZE = 10;
+		let isChunking = false;
+		if (staged.files.length > MAX_FILES) {
+			isChunking = true;
+		}
 
 		const s = spinner();
 		s.start(`🔍 Analyzing changes in ${staged.files.length} file${staged.files.length === 1 ? '' : 's'}`);
@@ -109,19 +116,85 @@ export default async (
 		try {
 			const baseUrl = providerInstance.getBaseUrl();
 			const apiKey = providerInstance.getApiKey() || '';
-			const result = await generateCommitMessage(
-				baseUrl,
-				apiKey,
-				config.model!,
-				config.locale,
-				staged.diff,
-				config.generate,
-				config['max-length'],
-				config.type,
-				timeout
-			);
-			messages = result.messages;
-			usage = result.usage;
+
+			if (isChunking) {
+				// Split files into chunks
+				const chunks: string[][] = [];
+				for (let i = 0; i < staged.files.length; i += CHUNK_SIZE) {
+					chunks.push(staged.files.slice(i, i + CHUNK_SIZE));
+				}
+
+				const chunkMessages: string[] = [];
+				let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+
+				for (const chunk of chunks) {
+					const chunkDiff = await getStagedDiffForFiles(chunk, excludeFiles);
+					if (chunkDiff && chunkDiff.diff) {
+						// Truncate diff if too large to avoid context limits
+						const maxDiffLength = 30000; // Approximate 7.5k tokens
+						let diffToUse = chunkDiff.diff;
+						if (diffToUse.length > maxDiffLength) {
+							diffToUse = diffToUse.substring(diffToUse.length - maxDiffLength) + '\n\n[Diff truncated due to size]';
+						}
+						const result = await generateCommitMessage(
+							baseUrl,
+							apiKey,
+							config.model!,
+							config.locale,
+							diffToUse,
+							config.generate,
+							config['max-length'],
+							config.type,
+							timeout
+						);
+						chunkMessages.push(...result.messages);
+						if (result.usage) {
+							totalUsage.promptTokens += (result.usage as any).promptTokens || 0;
+							totalUsage.completionTokens += (result.usage as any).completionTokens || 0;
+							totalUsage.totalTokens += (result.usage as any).totalTokens || 0;
+						}
+					}
+				}
+
+				// Combine the chunk messages
+				const combineResult = await combineCommitMessages(
+					chunkMessages,
+					baseUrl,
+					apiKey,
+					config.model!,
+					config.locale,
+					config['max-length'],
+					config.type,
+					timeout
+				);
+				messages = combineResult.messages;
+				if (combineResult.usage) {
+					totalUsage.promptTokens += (combineResult.usage as any).promptTokens || 0;
+					totalUsage.completionTokens += (combineResult.usage as any).completionTokens || 0;
+					totalUsage.totalTokens += (combineResult.usage as any).totalTokens || 0;
+				}
+				usage = totalUsage;
+			} else {
+				// Truncate diff if too large to avoid context limits
+				const maxDiffLength = 30000; // Approximate 7.5k tokens
+				let diffToUse = staged.diff;
+				if (diffToUse.length > maxDiffLength) {
+					diffToUse = diffToUse.substring(diffToUse.length - maxDiffLength) + '\n\n[Diff truncated due to size]';
+				}
+				const result = await generateCommitMessage(
+					baseUrl,
+					apiKey,
+					config.model!,
+					config.locale,
+					diffToUse,
+					config.generate,
+					config['max-length'],
+					config.type,
+					timeout
+				);
+				messages = result.messages;
+				usage = result.usage;
+			}
 		} finally {
 			const duration = Date.now() - startTime;
 			let tokensStr = '';
