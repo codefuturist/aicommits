@@ -17,8 +17,10 @@
 1. Install _aicommits_:
 
    ```sh
-   npm install -g aicommits
+   npm install -g aicommits@develop
    ```
+
+   > We need @develop since v2 is still not released as latest/main! Don't remove it to test v2!
 
 2. Run the setup command to choose your AI provider:
 
