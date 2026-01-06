@@ -65,6 +65,7 @@ export const generateCommitMessage = async (
 				prompt: diff,
 				temperature: 0.4,
 				maxRetries: 2,
+				maxOutputTokens: 2000,
 			}).finally(() => clearTimeout(timeoutId))
 		);
 		const results = await Promise.all(promises);
@@ -163,6 +164,7 @@ Do not add thanks, explanations, or any text outside the commit message.`;
 			prompt: messages.join('\n'),
 			temperature: 0.4,
 			maxRetries: 2,
+			maxOutputTokens: 2000,
 		});
 
 		clearTimeout(timeoutId);
