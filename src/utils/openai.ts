@@ -11,10 +11,20 @@ const sanitizeMessage = (message: string, maxLength: number) => {
  		.split('\n')[0] // Take only the first line
  		.replace(/(\w)\.$/, '$1')
  		.replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes
- 		.replace(/^<[^>]*>\s*/, '') // Remove leading tags
- 		.substring(0, maxLength);
+ 		.replace(/^<[^>]*>\s*/, ''); // Remove leading tags
 
-	return sanitized;
+ 	if (sanitized.length <= maxLength) {
+ 		return sanitized;
+ 	}
+
+ 	// Find the last space before maxLength to avoid truncating in the middle of a word
+ 	const lastSpaceIndex = sanitized.lastIndexOf(' ', maxLength);
+ 	if (lastSpaceIndex > 0) {
+ 		return sanitized.substring(0, lastSpaceIndex);
+ 	}
+
+ 	// If no space found, truncate at maxLength (for very long words)
+ 	return sanitized.substring(0, maxLength);
 };
 
 const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
