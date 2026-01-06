@@ -134,6 +134,7 @@ export const generatePrompt = (
 		`Commit message must be a maximum of ${maxLength} characters.`,
 		'Exclude anything unnecessary such as translation. Your entire response will be passed directly into git commit.',
 		`IMPORTANT: Do not include any explanations, introductions, or additional text. Do not wrap the commit message in quotes or any other formatting. The commit message must not exceed ${maxLength} characters. Respond with ONLY the commit message text.`,
+		'Be specific: include concrete details (package names, versions, functionality) rather than generic statements.',
 		commitTypes[type],
 		specifyCommitFormat(type),
 	]
