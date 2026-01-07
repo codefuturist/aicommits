@@ -7,7 +7,10 @@ export const TogetherProvider: ProviderDef = {
 	apiKeyFormat: 'tgp_',
 	modelsFilter: (models) =>
 		models
-			.filter((m: any) => !m.type || m.type === 'chat' || m.type === 'language')
+			.filter((m: any) =>
+				(!m.type || m.type === 'chat' || m.type === 'language') &&
+				!m.id.toLowerCase().includes('vision')
+			)
 			.map((m: any) => m.id),
 	defaultModels: [
 		'essentialai/rnj-1-instruct',

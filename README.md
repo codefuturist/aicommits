@@ -42,12 +42,12 @@ This will guide you through:
   - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
   - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
 
-  Alternatively, you can use environment variables (recommended for CI/CD):
+  **For CI/CD environments**, you can also set up configuration via the config file:
 
   ```bash
-  export OPENAI_API_KEY="your_api_key_here"
-  export OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
-  export OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
+  aicommits config set OPENAI_API_KEY="your_api_key_here"
+  aicommits config set OPENAI_BASE_URL="your_api_endpoint"  # Optional, for custom endpoints
+  aicommits config set OPENAI_MODEL="your_model_choice"     # Optional, defaults to provider default
   ```
 
   > **Note:** When using environment variables, ensure all related variables (e.g., `OPENAI_API_KEY` and `OPENAI_BASE_URL`) are set consistently to avoid configuration mismatches with the config file.

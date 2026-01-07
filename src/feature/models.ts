@@ -277,6 +277,12 @@ export const selectModel = async (
 
 		let modelOptions = prepareModelOptions(models, currentModel, providerDef);
 
+		// Limit to max 10 models to prevent UI breaking in terminals
+		const maxModels = 10;
+		if (modelOptions.length > maxModels) {
+			modelOptions = modelOptions.slice(0, maxModels);
+		}
+
 		let modelChoice = await select({
 			message: 'Choose your model:',
 			options: [

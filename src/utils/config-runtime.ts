@@ -56,13 +56,14 @@ export const getConfig = async (
 	suppressErrors?: boolean
 ): Promise<ValidConfig> => {
 	const config = await readConfigFile();
+
+	// Check for deprecated config properties
+	if (hasOwn(config, 'proxy')) {
+		console.warn('The "proxy" config property is deprecated and no longer supported');
+	}
+
 	const parsedConfig: Record<string, unknown> = {};
-	const { env } = process;
-	const effectiveEnvConfig = envConfig ?? {
-		OPENAI_API_KEY: env.OPENAI_API_KEY || env.OPENAI_KEY,
-		OPENAI_BASE_URL: env.OPENAI_BASE_URL,
-		OPENAI_MODEL: env.OPENAI_MODEL,
-	};
+	const effectiveEnvConfig = envConfig ?? {};
 
 	for (const key of Object.keys(configParsers) as ConfigKeys[]) {
 		const parser = configParsers[key];
