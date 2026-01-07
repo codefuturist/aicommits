@@ -1,6 +1,6 @@
 import { execa } from 'execa';
-import { black, dim, green, red, bgCyan } from 'kolorist';
-import clipboard from 'clipboardy';
+import { black, dim, green, red, yellow, bgCyan } from 'kolorist';
+import { copyToClipboard as copyMessage } from '../utils/clipboard.js';
 import {
 	intro,
 	outro,
@@ -17,7 +17,10 @@ import {
 } from '../utils/git.js';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
-import { generateCommitMessage, combineCommitMessages } from '../utils/openai.js';
+import {
+	generateCommitMessage,
+	combineCommitMessages,
+} from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 
 import { getCommitMessage } from '../utils/commit-helpers.js';
@@ -85,7 +88,8 @@ export default async (
 		}
 
 		// Use config timeout, or default per provider
-		const timeout = config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
+		const timeout =
+			config.timeout || (providerInstance.name === 'ollama' ? 30_000 : 10_000);
 
 		// Validate provider config
 		const validation = providerInstance.validateConfig();
@@ -109,7 +113,11 @@ export default async (
 		}
 
 		const s = spinner();
-		s.start(`🔍 Analyzing changes in ${staged.files.length} file${staged.files.length === 1 ? '' : 's'}`);
+		s.start(
+			`🔍 Analyzing changes in ${staged.files.length} file${
+				staged.files.length === 1 ? '' : 's'
+			}`
+		);
 		const startTime = Date.now();
 		let messages: string[];
 		let usage: any;
@@ -125,7 +133,11 @@ export default async (
 				}
 
 				const chunkMessages: string[] = [];
-				let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+				let totalUsage = {
+					promptTokens: 0,
+					completionTokens: 0,
+					totalTokens: 0,
+				};
 
 				for (const chunk of chunks) {
 					const chunkDiff = await getStagedDiffForFiles(chunk, excludeFiles);
@@ -134,7 +146,9 @@ export default async (
 						const maxDiffLength = 30000; // Approximate 7.5k tokens
 						let diffToUse = chunkDiff.diff;
 						if (diffToUse.length > maxDiffLength) {
-							diffToUse = diffToUse.substring(diffToUse.length - maxDiffLength) + '\n\n[Diff truncated due to size]';
+							diffToUse =
+								diffToUse.substring(diffToUse.length - maxDiffLength) +
+								'\n\n[Diff truncated due to size]';
 						}
 						const result = await generateCommitMessage(
 							baseUrl,
@@ -149,8 +163,10 @@ export default async (
 						);
 						chunkMessages.push(...result.messages);
 						if (result.usage) {
-							totalUsage.promptTokens += (result.usage as any).promptTokens || 0;
-							totalUsage.completionTokens += (result.usage as any).completionTokens || 0;
+							totalUsage.promptTokens +=
+								(result.usage as any).promptTokens || 0;
+							totalUsage.completionTokens +=
+								(result.usage as any).completionTokens || 0;
 							totalUsage.totalTokens += (result.usage as any).totalTokens || 0;
 						}
 					}
@@ -169,9 +185,12 @@ export default async (
 				);
 				messages = combineResult.messages;
 				if (combineResult.usage) {
-					totalUsage.promptTokens += (combineResult.usage as any).promptTokens || 0;
-					totalUsage.completionTokens += (combineResult.usage as any).completionTokens || 0;
-					totalUsage.totalTokens += (combineResult.usage as any).totalTokens || 0;
+					totalUsage.promptTokens +=
+						(combineResult.usage as any).promptTokens || 0;
+					totalUsage.completionTokens +=
+						(combineResult.usage as any).completionTokens || 0;
+					totalUsage.totalTokens +=
+						(combineResult.usage as any).totalTokens || 0;
 				}
 				usage = totalUsage;
 			} else {
@@ -179,7 +198,9 @@ export default async (
 				const maxDiffLength = 30000; // Approximate 7.5k tokens
 				let diffToUse = staged.diff;
 				if (diffToUse.length > maxDiffLength) {
-					diffToUse = diffToUse.substring(diffToUse.length - maxDiffLength) + '\n\n[Diff truncated due to size]';
+					diffToUse =
+						diffToUse.substring(diffToUse.length - maxDiffLength) +
+						'\n\n[Diff truncated due to size]';
 				}
 				const result = await generateCommitMessage(
 					baseUrl,
@@ -200,11 +221,14 @@ export default async (
 			let tokensStr = '';
 			if (usage?.total_tokens) {
 				const tokens = usage.total_tokens;
-				const formattedTokens = tokens >= 1000 ? `${(tokens / 1000).toFixed(0)}k` : tokens.toString();
+				const formattedTokens =
+					tokens >= 1000 ? `${(tokens / 1000).toFixed(0)}k` : tokens.toString();
 				const speed = Math.round(tokens / (duration / 1000));
 				tokensStr = `, ${formattedTokens} tokens (${speed} tokens/s)`;
 			}
-			s.stop(`✅ Changes analyzed in ${(duration / 1000).toFixed(1)}s${tokensStr}`);
+			s.stop(
+				`✅ Changes analyzed in ${(duration / 1000).toFixed(1)}s${tokensStr}`
+			);
 		}
 
 		if (messages.length === 0) {
@@ -220,20 +244,40 @@ export default async (
 
 		// Handle clipboard mode (early return)
 		if (copyToClipboard) {
-			try {
-				if (process.platform === 'darwin') {
-					await execa('pbcopy', { input: message });
-				} else {
-					await clipboard.write(message);
-				}
+			const success = await copyMessage(message);
+			if (success) {
 				outro(`${green('✔')} Message copied to clipboard`);
-			} catch (error: unknown) {
-				// Silently fail if clipboard is not available
 			}
 			return;
 		}
 
-		// Commit the message
-		await execa('git', ['commit', '-m', message, ...rawArgv]);
-		outro(`${green('✔')} Successfully committed!`);
+		// Commit the message with timeout
+		try {
+			await execa('git', ['commit', '-m', message, ...rawArgv], {
+				stdio: 'inherit',
+				cleanup: true,
+				timeout: 10000
+			});
+			outro(`${green('✔')} Successfully committed!`);
+		} catch (error: any) {
+			if (error.timedOut) {
+				// Copy to clipboard if commit times out
+				const success = await copyMessage(message);
+				if (success) {
+					outro(
+						`${yellow(
+							'⚠'
+						)} Commit timed out after 10 seconds. Message copied to clipboard.`
+					);
+				} else {
+					outro(
+						`${yellow(
+							'⚠'
+						)} Commit timed out after 10 seconds. Could not copy to clipboard.`
+					);
+				}
+				return;
+			}
+			throw error;
+		}
 	})().catch(handleCommandError);
