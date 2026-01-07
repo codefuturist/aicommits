@@ -69,6 +69,13 @@ cli(
 				alias: 'c',
 				default: false,
 			},
+			noVerify: {
+				type: Boolean,
+				description:
+					'Bypass pre-commit hooks while committing (default: false)',
+				alias: 'n',
+				default: false,
+			},
 			version: {
 				type: Boolean,
 				description: 'Show version number',
@@ -100,6 +107,7 @@ cli(
 				argv.flags.type,
 				argv.flags.confirm,
 				argv.flags.clipboard,
+				argv.flags.noVerify,
 				rawArgv
 			);
 		}

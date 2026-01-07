@@ -32,6 +32,7 @@ export default async (
 	commitType: string | undefined,
 	skipConfirm: boolean,
 	copyToClipboard: boolean,
+	noVerify: boolean,
 	rawArgv: string[]
 ) =>
 	(async () => {
@@ -252,12 +253,16 @@ export default async (
 		}
 
 		// Commit the message with timeout
-		try {
-			await execa('git', ['commit', '-m', message, ...rawArgv], {
-				stdio: 'inherit',
-				cleanup: true,
-				timeout: 10000
-			});
+			try {
+				const commitArgs = ['-m', message];
+				if (noVerify) {
+					commitArgs.push('--no-verify');
+				}
+				await execa('git', ['commit', ...commitArgs, ...rawArgv], {
+					stdio: 'inherit',
+					cleanup: true,
+					timeout: 10000
+				});
 			outro(`${green('✔')} Successfully committed!`);
 		} catch (error: any) {
 			if (error.timedOut) {
