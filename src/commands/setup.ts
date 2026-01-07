@@ -70,9 +70,17 @@ export default command(
 				return;
 			}
 
-			const apiUpdates = await provider.setup();
-			for (const [k, v] of apiUpdates) {
-				(config as any)[k] = v;
+			try {
+				const apiUpdates = await provider.setup();
+				for (const [k, v] of apiUpdates) {
+					(config as any)[k] = v;
+				}
+			} catch (error) {
+				if (error instanceof Error && error.message === 'Setup cancelled') {
+					outro('Setup cancelled');
+					return;
+				}
+				throw error;
 			}
 
 			// Recreate provider with updated config for validation
@@ -102,7 +110,8 @@ export default command(
 				config.OPENAI_MODEL = selectedModel;
 				console.log(`Model selected: ${selectedModel}`);
 			} else {
-				console.log('Model selection cancelled.');
+				outro('Model selection cancelled.');
+				return;
 			}
 
 			// Save all config at once

@@ -33,7 +33,7 @@ export class Provider {
 	}
 
 	async setup(): Promise<[string, string][]> {
-		const { text, password } = await import('@clack/prompts');
+		const { text, password, isCancel } = await import('@clack/prompts');
 		const updates: [string, string][] = [];
 
 		if (this.def.requiresApiKey) {
@@ -47,15 +47,12 @@ export class Provider {
 					: 'Enter your API key:',
 				validate: (value) => {
 					if (!value && !currentKey) return 'API key is required';
-					if (
-						value &&
-						this.def.apiKeyFormat &&
-						!value.startsWith(this.def.apiKeyFormat)
-					)
-						return `Invalid API key format, must start with "${this.def.apiKeyFormat}"`;
 					return;
 				},
 			});
+			if (isCancel(apiKey)) {
+				throw new Error('Setup cancelled');
+			}
 			if (apiKey) {
 				updates.push(['OPENAI_API_KEY', apiKey as string]);
 			}
@@ -67,6 +64,9 @@ export class Provider {
 				message: 'Enter Ollama endpoint (leave empty for default):',
 				placeholder: currentEndpoint,
 			});
+			if (isCancel(endpoint)) {
+				throw new Error('Setup cancelled');
+			}
 			if (endpoint && endpoint !== 'http://localhost:11434/v1') {
 				updates.push(['OPENAI_BASE_URL', endpoint as string]);
 			}

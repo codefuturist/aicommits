@@ -306,7 +306,7 @@ export const selectModel = async (
 		console.log(
 			'Could not fetch available models. Please specify a model name manually.'
 		);
-		const { text } = await import('@clack/prompts');
+		const { text, isCancel } = await import('@clack/prompts');
 		try {
 			const model = await text({
 				message: 'Enter your model name:',
@@ -315,6 +315,7 @@ export const selectModel = async (
 					return;
 				},
 			});
+			if (isCancel(model)) return null;
 			selectedModel = model as string;
 		} catch {
 			return null;
