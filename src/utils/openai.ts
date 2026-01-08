@@ -5,7 +5,7 @@ import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
 import { generatePrompt, commitTypeFormats } from './prompt.js';
 
-const sanitizeMessage = (message: string, maxLength: number) => {
+const sanitizeMessage = (message: string) => {
  	let sanitized = message
  		.trim()
  		.split('\n')[0] // Take only the first line
@@ -13,21 +13,37 @@ const sanitizeMessage = (message: string, maxLength: number) => {
  		.replace(/^["'`]|["'`]$/g, '') // Remove surrounding quotes
  		.replace(/^<[^>]*>\s*/, ''); // Remove leading tags
 
- 	if (sanitized.length <= maxLength) {
- 		return sanitized;
- 	}
-
- 	// Find the last space before maxLength to avoid truncating in the middle of a word
- 	const lastSpaceIndex = sanitized.lastIndexOf(' ', maxLength);
- 	if (lastSpaceIndex > 0) {
- 		return sanitized.substring(0, lastSpaceIndex);
- 	}
-
- 	// If no space found, truncate at maxLength (for very long words)
- 	return sanitized.substring(0, maxLength);
+ 	return sanitized;
 };
 
 const deduplicateMessages = (array: string[]) => Array.from(new Set(array));
+
+const shortenCommitMessage = async (
+	provider: any,
+	model: string,
+	message: string,
+	maxLength: number,
+	timeout: number
+) => {
+	const abortController = new AbortController();
+	const timeoutId = setTimeout(() => abortController.abort(), timeout);
+
+	try {
+		const result = await generateText({
+			model: provider(model),
+			system: `You are a tool that shortens git commit messages. Given a commit message, make it shorter while preserving the key information and format. The shortened message must be ${maxLength} characters or less. Respond with ONLY the shortened commit message.`,
+			prompt: message,
+			temperature: 0.2,
+			maxRetries: 2,
+			maxOutputTokens: 500,
+		});
+		clearTimeout(timeoutId);
+		return sanitizeMessage(result.text);
+	} catch (error) {
+		clearTimeout(timeoutId);
+		throw error;
+	}
+};
 
 export const generateCommitMessage = async (
 	baseUrl: string,
@@ -69,10 +85,33 @@ export const generateCommitMessage = async (
 			}).finally(() => clearTimeout(timeoutId))
 		);
 		const results = await Promise.all(promises);
-		const texts = results.map((r) => r.text);
-		const messages = deduplicateMessages(
-			texts.map((text: string) => sanitizeMessage(text, maxLength))
+		let texts = results.map((r) => r.text);
+		let messages = deduplicateMessages(
+			texts.map((text: string) => sanitizeMessage(text))
 		);
+
+		// Shorten messages that exceed maxLength
+		const MAX_SHORTEN_RETRIES = 3;
+		for (let retry = 0; retry < MAX_SHORTEN_RETRIES; retry++) {
+			let needsShortening = false;
+			const shortenedMessages = await Promise.all(
+				messages.map(async (msg) => {
+					if (msg.length <= maxLength) {
+						return msg;
+					}
+					needsShortening = true;
+					try {
+						return await shortenCommitMessage(provider, model, msg, maxLength, timeout);
+					} catch (error) {
+						// If shortening fails, keep the original and continue
+						return msg;
+					}
+				})
+			);
+			messages = deduplicateMessages(shortenedMessages);
+			if (!needsShortening) break;
+		}
+
 		const usage = {
 			prompt_tokens: results.reduce(
 				(sum, r) => sum + ((r.usage as any).promptTokens || 0),
@@ -169,7 +208,16 @@ Do not add thanks, explanations, or any text outside the commit message.`;
 
 		clearTimeout(timeoutId);
 
-		const combinedMessage = sanitizeMessage(result.text, maxLength);
+		let combinedMessage = sanitizeMessage(result.text);
+
+		// Shorten if too long
+		if (combinedMessage.length > maxLength) {
+			try {
+				combinedMessage = await shortenCommitMessage(provider, model, combinedMessage, maxLength, timeout);
+			} catch (error) {
+				// If shortening fails, keep the original
+			}
+		}
 
 		return { messages: [combinedMessage], usage: result.usage };
 	} catch (error) {

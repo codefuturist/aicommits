@@ -163,7 +163,7 @@ const prepareModelOptions = (
 		// Add highlighted models at the beginning with special labels
 		highlightedModels.forEach((model, index) => {
 			const isDefault = index === 0;
-			const label = isDefault ? `⭐ ${model} (default)` : `🔥 ${model}`;
+			const label = isDefault ? `👑 ${model} (default)` : `🔥 ${model}`;
 			modelOptions.unshift({ label, value: model });
 		});
 	}
