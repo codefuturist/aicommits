@@ -5,8 +5,31 @@ import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
 import { generatePrompt, commitTypeFormats } from './prompt.js';
 
+/**
+ * Extracts the actual response from reasoning model outputs.
+ * Reasoning models (like DeepSeek R1, QwQ, etc.) include their thought process
+ * in <think>...</think> tags. We need to extract the content after these tags.
+ */
+const extractResponseFromReasoning = (message: string): string => {
+	// Pattern to match <think>...</think> tags and everything before the actual response
+	// This handles both single-line and multi-line think blocks
+	const thinkPattern = /<think>[\s\S]*?<\/think>/gi;
+
+	// Remove all <think>...</think> blocks and any content before the first think block
+	let cleaned = message.replace(thinkPattern, '');
+
+	// Remove any leading/trailing whitespace and newlines
+	cleaned = cleaned.trim();
+
+	return cleaned;
+};
+
 const sanitizeMessage = (message: string) => {
- 	let sanitized = message
+	// First, extract response from reasoning models if present
+	let processed = extractResponseFromReasoning(message);
+
+	// Then apply existing sanitization
+ 	const sanitized = processed
  		.trim()
  		.split('\n')[0] // Take only the first line
  		.replace(/(\w)\.$/, '$1')
