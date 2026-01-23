@@ -17,21 +17,61 @@ export const assertGitRepo = async () => {
 
 const excludeFromDiff = (path: string) => `:(exclude)${path}`;
 
-const filesToExclude = [
+const lockFilePatterns = [
 	'package-lock.json',
 	'pnpm-lock.yaml',
-
 	// yarn.lock, Cargo.lock, Gemfile.lock, Pipfile.lock, etc.
 	'*.lock',
-].map(excludeFromDiff);
+];
+
+const isLockFile = (file: string) => {
+	return lockFilePatterns.some(pattern => {
+		if (pattern.includes('*')) {
+			// Simple glob match for *.lock
+			return file.endsWith('.lock');
+		}
+		return file === pattern;
+	});
+};
+
+const filesToExclude = lockFilePatterns.map(excludeFromDiff);
 
 export const getStagedDiff = async (excludeFiles?: string[]) => {
 	const diffCached = ['diff', '--cached', '--diff-algorithm=minimal'];
+
+	// First, get all staged files without any excludes
+	const { stdout: allFilesOutput } = await execa('git', [
+		...diffCached,
+		'--name-only',
+		...(excludeFiles ? excludeFiles.map(excludeFromDiff) : []),
+	]);
+
+	if (!allFilesOutput) {
+		return;
+	}
+
+	const allFiles = allFilesOutput.split('\n').filter(Boolean);
+
+	// Check if all staged files are lock files
+	const hasNonLockFiles = allFiles.some(file => !isLockFile(file));
+
+	let excludes: string[] = [];
+	if (hasNonLockFiles) {
+		// If there are non-lock files, exclude lock files
+		excludes = [...filesToExclude];
+	}
+	// If only lock files are staged, don't exclude them
+
+	excludes = [
+		...excludes,
+		...(excludeFiles ? excludeFiles.map(excludeFromDiff) : []),
+	];
+
+	// Get files after applying excludes
 	const { stdout: files } = await execa('git', [
 		...diffCached,
 		'--name-only',
-		...filesToExclude,
-		...(excludeFiles ? excludeFiles.map(excludeFromDiff) : []),
+		...excludes,
 	]);
 
 	if (!files) {
@@ -40,8 +80,7 @@ export const getStagedDiff = async (excludeFiles?: string[]) => {
 
 	const { stdout: diff } = await execa('git', [
 		...diffCached,
-		...filesToExclude,
-		...(excludeFiles ? excludeFiles.map(excludeFromDiff) : []),
+		...excludes,
 	]);
 
 	return {
