@@ -43,13 +43,14 @@ export async function checkAndAutoUpdate(options: AutoUpdateOptions): Promise<vo
 
 	try {
 		// Run npm update in background without blocking
-		await runBackgroundUpdate(pkg.name);
+		// Pass distTag to ensure we update to the correct channel (latest vs develop)
+		await runBackgroundUpdate(pkg.name, distTag);
 		console.log(`✓ ${pkg.name} updated to v${update.latest}`);
 		console.log('Please restart to use the new version.');
 	} catch (error) {
 		// If auto-update fails, just notify the user
 		console.log('Auto-update failed. You can manually update with:');
-		console.log(`  npm update -g ${pkg.name}`);
+		console.log(`  npm update -g ${pkg.name}@${distTag}`);
 		notifier.notify();
 	}
 }
@@ -64,10 +65,10 @@ async function checkIfGlobalInstallation(packageName: string): Promise<boolean> 
 	}
 }
 
-async function runBackgroundUpdate(packageName: string): Promise<void> {
+async function runBackgroundUpdate(packageName: string, distTag: string): Promise<void> {
 	// Use exec with detached option to run in background
 	return new Promise((resolve, reject) => {
-		const child = exec(`npm update -g ${packageName}`, {
+		const child = exec(`npm update -g ${packageName}@${distTag}`, {
 			timeout: 60000, // 60 second timeout
 			env: { ...process.env, NPM_CONFIG_PROGRESS: 'false' },
 		});
