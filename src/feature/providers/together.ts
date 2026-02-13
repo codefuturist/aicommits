@@ -7,16 +7,17 @@ export const TogetherProvider: ProviderDef = {
 	apiKeyFormat: 'tgp_',
 	modelsFilter: (models) =>
 		models
-			.filter((m: any) =>
-				(!m.type || m.type === 'chat' || m.type === 'language') &&
-				!m.id.toLowerCase().includes('vision')
+			.filter(
+				(m: any) =>
+					(!m.type || m.type === 'chat' || m.type === 'language') &&
+					!m.id.toLowerCase().includes('vision'),
 			)
 			.map((m: any) => m.id),
 	defaultModels: [
-		'essentialai/rnj-1-instruct',
+		'moonshotai/Kimi-K2-Instruct-0905',
+		'Qwen/Qwen3-Next-80B-A3B-Instruct',
 		'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
 		'meta-llama/Llama-3.2-3B-Instruct-Turbo',
-		'Qwen/Qwen3-Next-80B-A3B-Instruct',
 	],
 	requiresApiKey: true,
 };
