@@ -9,14 +9,24 @@ import setupCommand from './commands/setup.js';
 import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 import prCommand from './commands/pr.js';
+import { checkAndAutoUpdate } from './utils/auto-update.js';
 
+// Auto-update check - runs in production to update under the hood
 const notifier = updateNotifier({
 	pkg,
 	distTag: version.includes('-') ? 'develop' : 'latest',
 });
 
 if (version !== '0.0.0-semantic-release' && version.includes('-')) {
-	notifier.notify();
+	// Try auto-update first, fallback to notify if it fails
+	checkAndAutoUpdate({
+		pkg,
+		distTag: version.includes('-') ? 'develop' : 'latest',
+		autoUpdate: true,
+	}).catch(() => {
+		// If auto-update fails, just notify
+		notifier.notify();
+	});
 }
 
 const rawArgv = process.argv.slice(2);
