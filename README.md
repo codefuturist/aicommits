@@ -20,7 +20,7 @@
    npm install -g aicommits@develop
    ```
 
-   > We need @develop since v2 is still not released as latest/main! Don't remove it to test v2!
+   > We need @develop since v2 is still not released as latest/main! 
 
 2. Run the setup command to choose your AI provider:
 
@@ -40,6 +40,7 @@ This will guide you through:
   - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
   - **OpenRouter** - Get your API key from [OpenRouter](https://openrouter.ai/keys)
   - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
+  - **LM Studio** (local) - No API key required. Runs on your computer via [LM Studio](https://lmstudio.ai/)
   - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
 
   **For CI/CD environments**, you can also set up configuration via the config file:
