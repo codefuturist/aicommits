@@ -1,5 +1,4 @@
 import { cli } from 'cleye';
-import updateNotifier from 'update-notifier';
 import pkg from '../package.json';
 const { description, version } = pkg;
 import aicommits from './commands/aicommits.js';
@@ -12,20 +11,14 @@ import prCommand from './commands/pr.js';
 import { checkAndAutoUpdate } from './utils/auto-update.js';
 
 // Auto-update check - runs in production to update under the hood
-const notifier = updateNotifier({
-	pkg,
-	distTag: version.includes('-') ? 'develop' : 'latest',
-});
+// Skip during git hooks to avoid breaking commit flow
+if (!isCalledFromGitHook && version !== '0.0.0-semantic-release') {
+	const distTag = version.includes('-') ? 'develop' : 'latest';
 
-if (version !== '0.0.0-semantic-release' && version.includes('-')) {
-	// Try auto-update first, fallback to notify if it fails
+	// Check for updates and auto-update if available
 	checkAndAutoUpdate({
 		pkg,
-		distTag: version.includes('-') ? 'develop' : 'latest',
-		autoUpdate: true,
-	}).catch(() => {
-		// If auto-update fails, just notify
-		notifier.notify();
+		distTag,
 	});
 }
 
@@ -79,18 +72,18 @@ cli(
 				alias: 'c',
 				default: false,
 			},
-			noVerify: {
-				type: Boolean,
-				description:
-					'Bypass pre-commit hooks while committing (default: false)',
-				alias: 'n',
-				default: false,
-			},
-			version: {
-				type: Boolean,
-				description: 'Show version number',
-				alias: 'v',
-			},
+		noVerify: {
+			type: Boolean,
+			description:
+				'Bypass pre-commit hooks while committing (default: false)',
+			alias: 'n',
+			default: false,
+		},
+		version: {
+			type: Boolean,
+			description: 'Show version number',
+			alias: 'v',
+		},
 		},
 
 		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand],
