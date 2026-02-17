@@ -98,9 +98,9 @@ export const getStagedDiffForFiles = async (files: string[], excludeFiles?: stri
 
 	const { stdout: diff } = await execa('git', [
 		...diffCached,
-		...excludes,
 		'--',
 		...files,
+		...excludes,
 	]);
 
 	return {
