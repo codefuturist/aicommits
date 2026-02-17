@@ -30,7 +30,8 @@ const isLockFile = (file: string) => {
 			// Simple glob match for *.lock
 			return file.endsWith('.lock');
 		}
-		return file === pattern;
+		// Match lock files by basename to handle subdirectories
+		return file.endsWith('/' + pattern) || file === pattern;
 	});
 };
 
