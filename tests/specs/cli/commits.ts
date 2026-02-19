@@ -350,7 +350,7 @@ export default testSuite(({ describe }) => {
 				await fixture.rm();
 			});
 
-			test('Accepts empty --type flag', async () => {
+			test('Accepts plain --type flag', async () => {
 				const conventionalCommitPattern =
 					/(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test):\s/;
 				const { fixture, aicommits } = await createFixture({
@@ -361,7 +361,7 @@ export default testSuite(({ describe }) => {
 
 				await git('add', ['data.json']);
 
-				const committing = aicommits(['--type', '']);
+				const committing = aicommits(['--type', 'plain']);
 
 				committing.stdout!.on('data', (buffer: Buffer) => {
 					const stdout = buffer.toString();

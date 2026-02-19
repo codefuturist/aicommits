@@ -1,6 +1,6 @@
 import { KnownError } from './error.js';
 
-const commitTypes = ['', 'conventional', 'gitmoji'] as const;
+const commitTypes = ['plain', 'conventional', 'gitmoji'] as const;
 
 export type CommitType = (typeof commitTypes)[number];
 
@@ -48,7 +48,7 @@ const configParsers = {
 	},
 	type(type?: string) {
 		if (!type) {
-			return '';
+			return 'plain';
 		}
 		parseAssert(
 			'type',
