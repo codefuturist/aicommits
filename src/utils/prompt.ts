@@ -1,7 +1,7 @@
 import type { CommitType } from './config-types.js';
 
 export const commitTypeFormats: Record<CommitType, string> = {
-	'': '<commit message>',
+	plain: '<commit message>',
 	conventional: '<type>[optional (<scope>)]: <commit message>',
 	gitmoji: ':emoji: <commit message>',
 };
@@ -9,7 +9,7 @@ const specifyCommitFormat = (type: CommitType) =>
 	`The output response must be in format:\n${commitTypeFormats[type]}`;
 
 const commitTypes: Record<CommitType, string> = {
-	'': '',
+	plain: '',
 
 	/**
 	 * References:

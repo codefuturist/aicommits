@@ -114,6 +114,22 @@ export default command(
 				return;
 			}
 
+			const typeChoice = await select({
+				message: 'Choose commit message format:',
+				options: [
+					{ value: 'plain', label: 'Plain - Simple format without structure' },
+					{ value: 'conventional', label: 'Conventional - Standard conventional commits' },
+					{ value: 'gitmoji', label: 'Gitmoji - Using emojis for commit types' },
+				],
+				initialValue: 'plain',
+			});
+
+			if (isCancel(typeChoice)) {
+				outro('Setup cancelled');
+				return;
+			}
+			(config as any).type = typeChoice as string;
+
 			// Save all config at once
 			const finalUpdates = Object.entries(config).filter(
 				([k, v]) =>
