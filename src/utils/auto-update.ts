@@ -108,7 +108,7 @@ async function runBackgroundUpdate(
 	distTag: string
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const child = exec(`npm update -g ${packageName}@${distTag}`, {
+		const child = exec(`npm install -g ${packageName}@${distTag}`, {
 			timeout: 120000, // 2 minute timeout
 			env: { ...process.env, NPM_CONFIG_PROGRESS: 'false' },
 		});
@@ -119,7 +119,7 @@ async function runBackgroundUpdate(
 			if (code === 0 || code === null) {
 				resolve();
 			} else {
-				reject(new Error(`npm update exited with code ${code}`));
+				reject(new Error(`npm install exited with code ${code}`));
 			}
 		});
 	});
@@ -190,6 +190,6 @@ export async function checkAndAutoUpdate(
 		console.log('Please restart aic to use the new version.');
 	} catch (error) {
 		console.log('Auto-update failed. You can manually update with:');
-		console.log(`  npm update -g aicommits@${currentDistTag}`);
+		console.log(`  npm install -g aicommits@${currentDistTag}`);
 	}
 }

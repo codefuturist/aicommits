@@ -69,7 +69,7 @@ aicommits --version
 If it's not the [latest version](https://github.com/Nutlope/aicommits/releases/latest), run:
 
 ```sh
-npm update -g aicommits
+npm install -g aicommits@develop
 ```
 
 ## Usage
