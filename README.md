@@ -20,7 +20,7 @@
    npm install -g aicommits@develop
    ```
 
-   > We need @develop since v2 is still not released as latest/main! 
+   > We need @develop since v2 is still not released as latest/main!
 
 2. Run the setup command to choose your AI provider:
 
@@ -33,6 +33,7 @@ This will guide you through:
 - Selecting your AI provider (sets the `provider` config)
 - Configuring your API key
 - **Automatically fetching and selecting from available models** (when supported)
+- **Choosing your preferred commit message format** (plain, conventional, or gitmoji)
 
   Supported providers include:
 
@@ -97,7 +98,7 @@ aicommits --all # or -a
 - `--generate` or `-g`: Number of messages to generate (default: **1**)
 - `--exclude` or `-x`: Files to exclude from AI analysis
 - `--all` or `-a`: Automatically stage changes in tracked files for the commit (default: **false**)
-- `--type` or `-t`: Git commit message format (default: **conventional**). Supports `conventional` and `gitmoji`
+- `--type` or `-t`: Git commit message format (default: **plain**). Supports `plain`, `conventional`, and `gitmoji`
 - `--confirm` or `-y`: Skip confirmation when committing after message generation (default: **false**)
 - `--clipboard` or `-c`: Copy the selected message to the clipboard instead of committing (default: **false**)
 
@@ -111,15 +112,23 @@ aicommits --generate <i> # or -g <i>
 
 > Warning: this uses more tokens, meaning it costs more.
 
-#### Generating Conventional Commits
+#### Commit Message Formats
 
-If you'd like to generate [Conventional Commits](https://conventionalcommits.org/), you can use the `--type` flag followed by `conventional`. This will prompt `aicommits` to format the commit message according to the Conventional Commits specification:
+You can choose from three different commit message formats:
+
+- **plain** (default): Simple, unstructured commit messages
+- **conventional**: [Conventional Commits](https://conventionalcommits.org/) format with type and scope
+- **gitmoji**: Emoji-based commit messages
+
+Use the `--type` flag to specify the format:
 
 ```sh
 aicommits --type conventional # or -t conventional
+aicommits --type gitmoji       # or -t gitmoji
+aicommits --type plain         # or -t plain (default)
 ```
 
-This feature can be useful if your project follows the Conventional Commits standard or if you're using tools that rely on this commit format.
+This feature is useful if your project follows a specific commit message standard or if you're using tools that rely on these commit formats.
 
 ### Git hook
 
@@ -297,18 +306,20 @@ aicommits config set max-length=100
 
 #### type
 
-Default: `""` (Empty string)
+Default: `plain`
 
-The type of commit message to generate. Set this to "conventional" to generate commit messages that follow the Conventional Commits specification:
+The type of commit message to generate. Available options:
+
+- `plain`: Simple, unstructured commit messages
+- `conventional`: Conventional Commits format with type and scope
+- `gitmoji`: Emoji-based commit messages
+
+Examples:
 
 ```sh
 aicommits config set type=conventional
-```
-
-You can clear this option by setting it to an empty string:
-
-```sh
-aicommits config set type=
+aicommits config set type=gitmoji
+aicommits config set type=plain
 ```
 
 ## How it works
