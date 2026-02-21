@@ -10,14 +10,72 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { KnownError, handleCommandError } from '../utils/error.js';
 
+type GitProvider = 'github' | 'gitlab' | 'bitbucket' | 'azure';
+
+interface RepoInfo {
+	provider: GitProvider;
+	owner: string;
+	repo: string;
+}
+
+function parseRemoteUrl(remoteUrl: string): RepoInfo {
+	const githubMatch = remoteUrl.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/);
+	if (githubMatch) {
+		return { provider: 'github', owner: githubMatch[1], repo: githubMatch[2] };
+	}
+
+	const gitlabMatch = remoteUrl.match(/gitlab\.com[\/:]([^\/]+)\/([^\/\.]+)/);
+	if (gitlabMatch) {
+		return { provider: 'gitlab', owner: gitlabMatch[1], repo: gitlabMatch[2] };
+	}
+
+	const bitbucketMatch = remoteUrl.match(/bitbucket\.org[\/:]([^\/]+)\/([^\/\.]+)/);
+	if (bitbucketMatch) {
+		return { provider: 'bitbucket', owner: bitbucketMatch[1], repo: bitbucketMatch[2] };
+	}
+
+	const azureMatch = remoteUrl.match(/dev\.azure\.com[\/:]([^\/]+)\/([^\/\.]+)|vs-internal\.visualstudio\.com[\/:]([^\/]+)\/([^\/\.]+)/);
+	if (azureMatch) {
+		return { provider: 'azure', owner: azureMatch[1] || azureMatch[3], repo: azureMatch[2] || azureMatch[4] };
+	}
+
+	throw new KnownError(
+		`Unsupported git provider. Supported: GitHub, GitLab, Bitbucket, Azure DevOps.\nRemote URL: ${remoteUrl}`
+	);
+}
+
+function getPrUrl(
+	provider: GitProvider,
+	owner: string,
+	repo: string,
+	defaultBranch: string,
+	currentBranch: string,
+	title: string,
+	body: string
+): string {
+	const encodedTitle = encodeURIComponent(title);
+	const encodedBody = encodeURIComponent(body);
+
+	switch (provider) {
+		case 'github':
+			return `https://github.com/${owner}/${repo}/compare/${defaultBranch}...${currentBranch}?expand=1&title=${encodedTitle}&body=${encodedBody}`;
+		case 'gitlab':
+			return `https://gitlab.com/${owner}/${repo}/-/merge_requests/new?merge_request[source_branch]=${encodeURIComponent(currentBranch)}&merge_request[target_branch]=${encodeURIComponent(defaultBranch)}&merge_request[title]=${encodedTitle}&merge_request[description]=${encodedBody}`;
+		case 'bitbucket':
+			return `https://bitbucket.org/${owner}/${repo}/pull-requests/new?source=${encodeURIComponent(currentBranch)}&dest=${encodeURIComponent(defaultBranch)}&title=${encodedTitle}&description=${encodedBody}`;
+		case 'azure':
+			return `https://dev.azure.com/${owner}/${repo}/_git/${repo}/pullrequestcreate?sourceRef=${encodeURIComponent(currentBranch)}&targetRef=${encodeURIComponent(defaultBranch)}&title=${encodedTitle}&description=${encodedBody}`;
+	}
+}
+
 export default command(
 	{
 		name: 'pr',
 		description:
-			'[beta 🚧] Generate and create a PR on GitHub based on branch diff',
+			'[beta 🚧] Generate and create a PR (GitHub/GitLab/Bitbucket/Azure) based on branch diff',
 		help: {
 			description:
-				'[beta 🚧] Generate and create a PR on GitHub based on branch diff',
+				'[beta 🚧] Generate and create a PR (GitHub/GitLab/Bitbucket/Azure) based on branch diff',
 		},
 	},
 	() => {
@@ -41,13 +99,8 @@ export default command(
 				'get-url',
 				'origin',
 			]);
-			const repoMatch = remoteUrl.match(/github\.com[\/:]([^\/]+)\/([^\/\.]+)/);
-			if (!repoMatch) {
-				throw new KnownError(
-					'Could not determine GitHub repository from remote URL'
-				);
-			}
-			const [, owner, repo] = repoMatch;
+			const repoInfo = parseRemoteUrl(remoteUrl);
+			const { provider, owner, repo } = repoInfo;
 
 			// Get default branch from git remote
 			let defaultBranch = 'main';
@@ -171,7 +224,7 @@ export default command(
 			const { text } = await import('@clack/prompts');
 			const proceed = await text({
 				message:
-					'Press Enter to open PR creation in browser, or Ctrl+C to cancel',
+					'Press Enter to push and open PR creation in browser, or Ctrl+C to cancel',
 				placeholder: 'Press Enter',
 			});
 
@@ -180,9 +233,26 @@ export default command(
 				return;
 			}
 
-			const prUrl = `https://github.com/${owner}/${repo}/compare/${defaultBranch}...${currentBranch.trim()}?expand=1&title=${encodeURIComponent(
-				title
-			)}&body=${encodeURIComponent(body)}`;
+			const pushing = spinner();
+			pushing.start(`Pushing branch to ${provider}`);
+
+			try {
+				await execa('git', ['push', '-u', 'origin', currentBranch.trim()]);
+				pushing.stop(`Branch pushed to ${provider}`);
+			} catch (error) {
+				pushing.stop('Failed to push branch');
+				throw new KnownError(`Failed to push branch: ${error instanceof Error ? error.message : String(error)}`);
+			}
+
+			const prUrl = getPrUrl(
+				provider,
+				owner,
+				repo,
+				defaultBranch,
+				currentBranch.trim(),
+				title,
+				body
+			);
 
 			const creating = spinner();
 			creating.start('Opening PR creation page in browser');
