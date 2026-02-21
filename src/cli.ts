@@ -1,3 +1,6 @@
+// Suppress AI SDK warnings (e.g., "temperature is not supported for reasoning models")
+globalThis.AI_SDK_LOG_WARNINGS = false;
+
 import { cli } from 'cleye';
 import pkg from '../package.json';
 const { description, version } = pkg;
