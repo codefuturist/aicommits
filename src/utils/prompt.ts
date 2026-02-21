@@ -2,7 +2,7 @@ import type { CommitType } from './config-types.js';
 
 export const commitTypeFormats: Record<CommitType, string> = {
 	plain: '<commit message>',
-	conventional: '<type>[optional (<scope>)]: <commit message>',
+	conventional: '<type>[optional (<scope>)]: <commit message>\nThe commit message subject must start with a lowercase letter',
 	gitmoji: ':emoji: <commit message>',
 };
 const specifyCommitFormat = (type: CommitType) =>
@@ -19,7 +19,7 @@ const commitTypes: Record<CommitType, string> = {
 	 * Conventional Changelog:
 	 * https://github.com/conventional-changelog/conventional-changelog/blob/d0e5d5926c8addba74bc962553dd8bcfba90e228/packages/conventional-changelog-conventionalcommits/writer-opts.js#L182-L193
 	 */
-	conventional: `Choose a type from the type-to-description JSON below that best describes the git diff:\n${JSON.stringify(
+	conventional: `Choose a type from the type-to-description JSON below that best describes the git diff. IMPORTANT: The type MUST be lowercase (e.g., "feat", not "Feat" or "FEAT"):\n${JSON.stringify(
 		{
 			docs: 'Documentation only changes',
 			style:
