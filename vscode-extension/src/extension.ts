@@ -1,12 +1,18 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
+import { promisify } from 'util';
+import { exec } from 'child_process';
+
+const execAsync = promisify(exec);
 
 let outputChannel: vscode.OutputChannel;
 const TIMEOUT_MS = 15000;
 let cliInstalled = false;
+const PACKAGE_NAME = 'aicommits';
 
 export function activate(context: vscode.ExtensionContext) {
 	outputChannel = vscode.window.createOutputChannel('AI Commits');
+	outputChannel.appendLine('[Extension] Activating AI Commits extension...');
 
 	const generateCommand = vscode.commands.registerCommand(
 		'aicommits.generate',
@@ -45,7 +51,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function checkCliOnActivation() {
+	outputChannel.appendLine('[Activation] Checking CLI installation...');
 	cliInstalled = await isCliInstalled();
+	outputChannel.appendLine(`[Activation] CLI installed: ${cliInstalled}`);
 
 	if (!cliInstalled) {
 		const action = await vscode.window.showInformationMessage(
@@ -57,14 +65,117 @@ async function checkCliOnActivation() {
 		if (action === 'Install') {
 			await installCli();
 		}
+	} else {
+		checkForCliUpdate();
+	}
+}
+
+async function getCliVersion(): Promise<string | null> {
+	try {
+		const { stdout } = await execAsync('aicommits --version');
+		const version = stdout.trim().replace(/^v/, '');
+		outputChannel.appendLine(`[CLI] Detected version: ${version}`);
+		return version;
+	} catch (error) {
+		outputChannel.appendLine(`[CLI] Failed to get version: ${error}`);
+		return null;
+	}
+}
+
+async function fetchLatestVersion(distTag: string): Promise<string | null> {
+	const url = `https://registry.npmjs.org/${PACKAGE_NAME}/${distTag}`;
+	outputChannel.appendLine(`[NPM] Fetching: ${url}`);
+	try {
+		const response = await fetch(url, { headers: { Accept: 'application/json' } });
+		outputChannel.appendLine(`[NPM] Response status: ${response.status}`);
+		if (!response.ok) return null;
+		const data = (await response.json()) as { version?: string };
+		outputChannel.appendLine(`[NPM] Got version: ${data.version}`);
+		return data.version || null;
+	} catch (error) {
+		outputChannel.appendLine(`[NPM] Fetch failed: ${error}`);
+		return null;
+	}
+}
+
+function parseVersion(version: string) {
+	const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)/);
+	if (!match) return { major: 0, minor: 0, patch: 0, prerelease: null as string | null, prereleaseNum: 0 };
+	return {
+		major: parseInt(match[1], 10),
+		minor: parseInt(match[2], 10),
+		patch: parseInt(match[3], 10),
+		prerelease: match[4] || null,
+		prereleaseNum: match[5] ? parseInt(match[5], 10) : 0,
+	};
+}
+
+function compareVersions(v1: string, v2: string): number {
+	const p1 = parseVersion(v1);
+	const p2 = parseVersion(v2);
+	if (p1.major !== p2.major) return p1.major > p2.major ? 1 : -1;
+	if (p1.minor !== p2.minor) return p1.minor > p2.minor ? 1 : -1;
+	if (p1.patch !== p2.patch) return p1.patch > p2.patch ? 1 : -1;
+	if (!p1.prerelease && p2.prerelease) return 1;
+	if (p1.prerelease && !p2.prerelease) return -1;
+	if (!p1.prerelease && !p2.prerelease) return 0;
+	if (p1.prereleaseNum !== p2.prereleaseNum) return p1.prereleaseNum > p2.prereleaseNum ? 1 : -1;
+	return 0;
+}
+
+async function checkForCliUpdate(): Promise<void> {
+	outputChannel.appendLine('[Update Check] Starting...');
+
+	const currentVersion = await getCliVersion();
+	outputChannel.appendLine(`[Update Check] Current version: ${currentVersion || 'not found'}`);
+	if (!currentVersion) return;
+
+	const distTag = currentVersion.includes('-') ? 'develop' : 'latest';
+	outputChannel.appendLine(`[Update Check] Using dist-tag: ${distTag}`);
+
+	const latestVersion = await fetchLatestVersion(distTag);
+	outputChannel.appendLine(`[Update Check] Latest version: ${latestVersion || 'not found'}`);
+	if (!latestVersion) return;
+
+	const comparison = compareVersions(currentVersion, latestVersion);
+	outputChannel.appendLine(`[Update Check] Version comparison result: ${comparison}`);
+
+	if (comparison >= 0) {
+		outputChannel.appendLine('[Update Check] No update needed');
+		return;
+	}
+
+	outputChannel.appendLine(`[Update Check] Update available! Showing notification...`);
+
+	const action = await vscode.window.showInformationMessage(
+		`A new version of aicommits CLI is available (v${latestVersion}). Update now?`,
+		'Update',
+		'Later',
+	);
+
+	outputChannel.appendLine(`[Update Check] User action: ${action || 'dismissed'}`);
+
+	if (action === 'Update') {
+		const terminal = vscode.window.createTerminal({ name: 'AI Commits Update' });
+		terminal.show();
+		terminal.sendText(`npm install -g ${PACKAGE_NAME}@${distTag}`);
+		vscode.window.showInformationMessage('Updating aicommits CLI...');
 	}
 }
 
 async function isCliInstalled(): Promise<boolean> {
 	return new Promise((resolve) => {
 		const proc = spawn('which', ['aicommits'], { shell: true });
-		proc.on('close', (code) => resolve(code === 0));
-		proc.on('error', () => resolve(false));
+		let output = '';
+		proc.stdout.on('data', (data) => { output += data.toString(); });
+		proc.on('close', (code) => {
+			outputChannel.appendLine(`[CLI Check] which aicommits exit code: ${code}, output: ${output.trim()}`);
+			resolve(code === 0);
+		});
+		proc.on('error', (err) => {
+			outputChannel.appendLine(`[CLI Check] Error: ${err}`);
+			resolve(false);
+		});
 	});
 }
 
