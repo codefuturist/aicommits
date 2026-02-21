@@ -8,27 +8,23 @@
 	"icon": "media/icon.png",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/anthropics/aicommits"
+		"url": "https://github.com/nutlope/aicommits"
 	},
 	"engines": {
 		"vscode": "^1.85.0"
 	},
 	"categories": [
-		"Other",
-		"SCM Providers"
+		"Source Control",
+		"AI"
 	],
 	"keywords": [
+		"aicommits",
 		"git",
 		"commit",
 		"ai",
 		"openai",
 		"gpt",
 		"llm"
-	],
-	"activationEvents": [
-		"onCommand:aicommits.generate",
-		"onCommand:aicommits.generateConventional",
-		"onCommand:aicommits.generateGitmoji"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
