@@ -30,9 +30,8 @@ Generate git commit messages using AI directly from VSCode's Git interface.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `aicommits.path` | `aicommits` | Path to the aicommits CLI binary |
-| `aicommits.defaultType` | `plain` | Default commit message format |
+| `aicommits.defaultType` | `plain` | Default commit message format (plain, conventional, gitmoji) |
 | `aicommits.autoCommit` | `false` | Auto-commit after generating (skips preview) |
-| `aicommits.timeout` | `30000` | Timeout in ms for AI generation |
 
 ## Commands
 

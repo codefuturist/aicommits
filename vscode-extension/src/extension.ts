@@ -16,7 +16,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const generateCommand = vscode.commands.registerCommand(
 		'aicommits.generate',
-		() => generateCommitMessage('plain'),
+		() => {
+			const config = vscode.workspace.getConfiguration('aicommits');
+			const defaultType = config.get<'plain' | 'conventional' | 'gitmoji'>('defaultType', 'plain');
+			return generateCommitMessage(defaultType);
+		},
 	);
 
 	const generateConventionalCommand = vscode.commands.registerCommand(
