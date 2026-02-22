@@ -2,7 +2,7 @@
 	"name": "aicommits",
 	"displayName": "AI Commits",
 	"description": "Generate git commit messages using AI directly from VSCode's Git interface",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"publisher": "aicommits",
 	"license": "MIT",
 	"icon": "media/icon.png",
@@ -107,7 +107,7 @@
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint src --ext ts",
 		"package": "vsce package --no-dependencies",
-		"cursor": "pnpm run package && cursor --install-extension aicommits-0.0.1.vsix"
+		"cursor": "pnpm run package && cursor --install-extension aicommits-1.0.0.vsix"
 	},
 	"devDependencies": {
 		"@types/node": "^20.10.0",
