@@ -16,6 +16,20 @@
 
 1. Install _aicommits_:
 
+   **From this fork (includes GitHub Copilot & Mistral providers):**
+
+   ```sh
+   pnpm add -g "https://gitpkg.now.sh/codefuturist/monorepository/apps/cli/aicommits?develop"
+   ```
+
+   Or with npm:
+
+   ```sh
+   npm install -g "https://gitpkg.now.sh/codefuturist/monorepository/apps/cli/aicommits?develop"
+   ```
+
+   **From the original npm package:**
+
    ```sh
    npm install -g aicommits@develop
    ```
@@ -37,7 +51,9 @@ This will guide you through:
 
   Supported providers include:
 
-  - **TogetherAI** (recommended) - Get your API key from [TogetherAI](https://api.together.ai/)
+  - **GitHub Copilot** - Uses [GitHub Models API](https://github.com/marketplace/models). Auto-detects token via `gh` CLI. Requires a GitHub PAT with `models:read` scope.
+  - **Mistral AI** - Get your API key from [console.mistral.ai](https://console.mistral.ai)
+  - **TogetherAI** - Get your API key from [TogetherAI](https://api.together.ai/)
   - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
   - **OpenRouter** - Get your API key from [OpenRouter](https://openrouter.ai/keys)
   - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)

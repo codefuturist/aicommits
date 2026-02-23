@@ -24,6 +24,7 @@
 	},
 	"scripts": {
 		"build": "pkgroll --minify",
+		"prepare": "pnpm build",
 		"lint": "",
 		"type-check": "tsc",
 		"test": "tsx tests",
