@@ -19,8 +19,8 @@ node_modules/
 .env
 .env.test
 
-# Distribution
-dist
+# Distribution (dist/ is tracked — required for npm install from git)
+# dist
 
 # Eslint cache
 .eslintcache
