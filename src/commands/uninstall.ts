@@ -9,7 +9,11 @@ export default command(
 		name: 'uninstall',
 		description: 'Remove installed aicommits binaries',
 		help: {
-			description: 'Remove installed aicommits binaries',
+			description: `Remove installed aicommits binaries from PATH.
+
+Examples:
+  aicommits uninstall              Interactively confirm removal
+  aicommits uninstall -y           Remove without confirmation prompt`,
 		},
 		parameters: [],
 		flags: {

@@ -74,8 +74,11 @@ export default command(
 		description:
 			'[beta 🚧] Generate and create a PR (GitHub/GitLab/Bitbucket/Azure) based on branch diff',
 		help: {
-			description:
-				'[beta 🚧] Generate and create a PR (GitHub/GitLab/Bitbucket/Azure) based on branch diff',
+			description: `[beta 🚧] Generate and create a PR (GitHub/GitLab/Bitbucket/Azure) based on branch diff.
+Uses AI to write a PR title and description from the commits on your branch.
+
+Examples:
+  aicommits pr                     Generate a PR for the current branch`,
 		},
 	},
 	() => {

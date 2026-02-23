@@ -131,14 +131,36 @@ cli(
 			description: `${description}
 
 Examples:
-  aicommits                        Generate a commit message for staged changes
-  aicommits -y                     Generate and commit without confirmation
-  aicommits -a -y                  Stage all tracked changes, generate, and commit
-  aicommits -g 3                   Generate 3 message options to choose from
-  aicommits -t conventional        Use conventional commit format
-  aicommits -p "write in German"   Guide the AI with a custom prompt
-  aicommits config info            Show config sources and active settings
-  aicommits setup                  Interactive provider/model setup`,
+  # Core usage
+  aicommits                          Generate a commit message for staged changes
+  aicommits -y                       Generate and commit without confirmation
+  aicommits -a -y                    Stage all tracked changes, generate, and commit
+  aicommits -g 3                     Pick from 3 generated message options
+
+  # Customize output
+  aicommits -t conventional          Use conventional commit format (feat:, fix:, etc.)
+  aicommits -t gitmoji               Use gitmoji commit format (🎉, 🐛, etc.)
+  aicommits -p "write in German"     Guide the AI with a custom instruction
+  aicommits -c                       Copy generated message to clipboard (don't commit)
+  aicommits -x package-lock.json     Exclude a file from AI analysis
+
+  # Atomic commits with AI
+  aicommits split                    Split changes into logical atomic commits with AI
+  aicommits split -d                 Preview commit groups without committing (dry run)
+  aicommits split -S                 Re-group already-staged files into multiple commits
+
+  # Configuration
+  aicommits setup                    Interactive provider/API key setup
+  aicommits model                    Switch AI model
+  aicommits config info              Show all config sources and active settings
+  aicommits config set type=conventional          Set default commit format
+  aicommits config set post-commit="git push"     Auto-push after every commit
+  aicommits config set post-commit-rebuild=smart  Auto-rebuild binary after commits
+
+  # Installation & maintenance
+  aicommits hook install             Auto-generate messages on every git commit
+  aicommits install                  Install binary to ~/.local/bin
+  aicommits doctor                   Check for PATH conflicts`,
 		},
 
 		ignoreArgv: (type) => type === 'unknown-flag' || type === 'argument',

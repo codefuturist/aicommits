@@ -27,7 +27,20 @@ Modes:
   set      Set a config value:   aicommits config set OPENAI_MODEL=gpt-4o
   info     Show all config sources and precedence
   migrate  Move legacy ~/.aicommits to XDG path (~/.config/aicommits/config)
-  path     Print the resolved config file path`,
+  path     Print the resolved config file path
+
+Common config keys:
+  OPENAI_API_KEY          Your provider API key
+  OPENAI_BASE_URL         Provider base URL (auto-set by setup)
+  OPENAI_MODEL            Model to use (e.g. gpt-4o, openai/gpt-4.1)
+  type                    Default commit format: plain | conventional | gitmoji
+  locale                  Language for commit messages (e.g. en, de, fr)
+  max-length              Max commit message length (default: 72)
+  post-commit             Command to run after commit (e.g. "git push")
+  post-commit-rebuild     Rebuild binary after commit: smart | always | off
+  post-commit-install     Auto-install rebuilt binary: true | false
+  post-commit-branches    Only rebuild on matching branches (glob, e.g. "main,release/*")
+  auto-rebuild            Dev rebuild mode: prompt | auto | off`,
 		},
 		parameters: ['[mode]', '[key=value...]'],
 	},

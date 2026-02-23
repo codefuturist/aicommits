@@ -9,7 +9,11 @@ export default command(
 		name: 'model',
 		description: 'Select or change your AI model',
 		help: {
-			description: 'Select or change your AI model',
+			description: `Select or change the AI model for commit generation.
+Fetches available models from the configured provider and lets you pick one.
+
+Examples:
+  aicommits model                  Browse and select from available models`,
 		},
 		alias: ['-m', 'models'],
 	},

@@ -36,8 +36,17 @@ export default command(
 		alias: 'stage',
 		description: 'AI-powered commit splitting — group changes into logical atomic commits',
 		help: {
-			description:
-				'Analyze changes, group them into logical atomic commits using AI, then commit each group.',
+			description: `Analyze changes, group them into logical atomic commits using AI, then commit each group.
+
+Examples:
+  aicommits split                  Auto-group unstaged changes and commit each
+  aicommits split -d               Dry run — preview groups without committing
+  aicommits split -y               Auto-commit all groups without confirmation
+  aicommits split -S               Re-group already-staged files into atomic commits
+  aicommits split -a               Include untracked files in grouping
+  aicommits split --scan           Show detected project boundaries (no AI)
+  aicommits split --flat           Skip boundary detection, group all changes freely
+  aicommits split -t conventional  Use conventional commit format for all messages`,
 		},
 		flags: {
 			all: {

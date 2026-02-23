@@ -12,7 +12,12 @@ export default command(
 		name: 'setup',
 		description: 'Configure your AI provider and settings',
 		help: {
-			description: 'Configure your AI provider and settings',
+			description: `Configure your AI provider and settings interactively.
+Walks you through selecting a provider (OpenAI, Copilot, Ollama, etc.)
+and saving your API key.
+
+Examples:
+  aicommits setup                  Start interactive provider configuration`,
 		},
 	},
 	() => {
