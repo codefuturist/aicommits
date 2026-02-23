@@ -162,8 +162,16 @@ const prepareModelOptions = (
 		
 		// Add highlighted models at the beginning with special labels
 		highlightedModels.forEach((model, index) => {
+			const isCurrent = model === currentModel;
 			const isDefault = index === 0;
-			const label = isDefault ? `👑 ${model} (default)` : `🔥 ${model}`;
+			let label: string;
+			if (isCurrent) {
+				label = `✓ ${model} (current)`;
+			} else if (isDefault) {
+				label = `👑 ${model} (default)`;
+			} else {
+				label = `🔥 ${model}`;
+			}
 			modelOptions.unshift({ label, value: model });
 		});
 	}
@@ -258,7 +266,8 @@ export const selectModel = async (
 	baseUrl: string,
 	apiKey: string,
 	currentModel?: string,
-	providerDef?: ProviderDef
+	providerDef?: ProviderDef,
+	providerName?: string
 ): Promise<string | null> => {
 	// Default to provider's default model if none set
 	if (!currentModel || currentModel === 'undefined') {
@@ -268,7 +277,7 @@ export const selectModel = async (
 	const s = spinner();
 	s.start('Fetching available models...');
 	const models = await fetchAndFilterModels(baseUrl, apiKey, providerDef);
-	s.stop();
+	s.stop(`${providerName || 'Provider'}: ${models.length} models available`);
 
 	let selectedModel: string | null = null;
 

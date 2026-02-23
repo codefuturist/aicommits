@@ -30,17 +30,7 @@ export default command(
 				return;
 			}
 
-			console.log(`Current provider: ${provider.displayName}`);
-
-			// Show current model
 			const currentModel = config.OPENAI_MODEL;
-			console.log(
-				`Current model: ${
-					currentModel && currentModel !== 'undefined'
-						? currentModel
-						: 'not set'
-				}`
-			);
 
 			// Validate provider config
 			const validation = provider.validateConfig();
@@ -58,7 +48,8 @@ export default command(
 				provider.getBaseUrl(),
 				provider.getApiKey() || '',
 				currentModel,
-				provider.getDefinition()
+				provider.getDefinition(),
+				provider.displayName
 			);
 
 			if (selectedModel) {
