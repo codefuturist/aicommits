@@ -83,6 +83,12 @@ cli(
 				alias: 'n',
 				default: false,
 			},
+			noPostCommit: {
+				type: Boolean,
+				description:
+					'Skip post-commit actions for this invocation (default: false)',
+				default: false,
+			},
 			prompt: {
 				type: String,
 				description:
@@ -121,6 +127,7 @@ cli(
 				argv.flags.yes,
 				argv.flags.clipboard,
 				argv.flags.noVerify,
+				argv.flags.noPostCommit,
 				argv.flags.prompt,
 				rawArgv
 			);

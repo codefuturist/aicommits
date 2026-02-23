@@ -51,7 +51,11 @@ export default command(
 
 			if (mode === 'set') {
 				await setConfigs(
-					keyValues.map((keyValue) => keyValue.split('=') as [string, string])
+					keyValues.map((keyValue) => {
+						const idx = keyValue.indexOf('=');
+						if (idx === -1) return [keyValue, ''] as [string, string];
+						return [keyValue.slice(0, idx), keyValue.slice(idx + 1)] as [string, string];
+					})
 				);
 				return;
 			}

@@ -19,6 +19,7 @@ import {
 	combineCommitMessages,
 } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
+import { runPostCommit } from '../utils/post-commit.js';
 
 import { getCommitMessage } from '../utils/commit-helpers.js';
 
@@ -30,6 +31,7 @@ export default async (
 	skipConfirm: boolean,
 	copyToClipboard: boolean,
 	noVerify: boolean,
+	noPostCommit: boolean,
 	customPrompt: string | undefined,
 	rawArgv: string[]
 ) =>
@@ -267,6 +269,11 @@ export default async (
 					timeout: 10000
 				});
 			outro(`${green('✔')} Successfully committed!`);
+
+			// Run post-commit actions
+			if (!noPostCommit) {
+				await runPostCommit(config, !skipConfirm);
+			}
 		} catch (error: any) {
 			if (error.timedOut) {
 				// Copy to clipboard if commit times out

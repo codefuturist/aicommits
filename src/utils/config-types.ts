@@ -90,6 +90,12 @@ const configParsers = {
 		);
 		return parsed;
 	},
+	'post-commit'(command?: string) {
+		if (!command || command.trim() === '') {
+			return undefined;
+		}
+		return command.trim();
+	},
 } as const;
 
 type ConfigKeys = keyof typeof configParsers;

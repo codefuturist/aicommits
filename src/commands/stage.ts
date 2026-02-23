@@ -26,6 +26,7 @@ import { getProvider } from '../feature/providers/index.js';
 import { groupChangesWithAI, groupBoundariesWithAI, type CommitGroup } from '../utils/openai.js';
 import { detectProjectBoundaries, formatBoundarySummary, formatBoundaryDetails } from '../utils/project-detection.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
+import { runPostCommit } from '../utils/post-commit.js';
 
 const BOUNDARY_THRESHOLD = 50;
 
@@ -93,6 +94,11 @@ export default command(
 				type: String,
 				description: 'Commit message format (plain, conventional, gitmoji)',
 				alias: 't',
+			},
+			noPostCommit: {
+				type: Boolean,
+				description: 'Skip post-commit actions for this invocation',
+				default: false,
 			},
 		},
 	},
@@ -439,6 +445,7 @@ export default command(
 			if (argv.flags.yes) {
 				await commitGroups(groups, isStaged, files);
 				outro(`${green('✔')} All ${groups.length} group${groups.length === 1 ? '' : 's'} committed!`);
+				if (!argv.flags.noPostCommit) await runPostCommit(config, false);
 				return;
 			}
 
@@ -461,6 +468,7 @@ export default command(
 			if (action === 'all') {
 				await commitGroups(groups, isStaged, files);
 				outro(`${green('✔')} All ${groups.length} group${groups.length === 1 ? '' : 's'} committed!`);
+				if (!argv.flags.noPostCommit) await runPostCommit(config, true);
 				return;
 			}
 
@@ -483,6 +491,7 @@ export default command(
 				const selectedGroups = (selected as number[]).map((i) => groups[i]);
 				await commitGroups(selectedGroups, isStaged, files);
 				outro(`${green('✔')} ${selectedGroups.length} group${selectedGroups.length === 1 ? '' : 's'} committed!`);
+				if (!argv.flags.noPostCommit) await runPostCommit(config, true);
 				return;
 			}
 
@@ -505,6 +514,7 @@ export default command(
 
 				await commitGroups(editedGroups, isStaged, files);
 				outro(`${green('✔')} All ${editedGroups.length} group${editedGroups.length === 1 ? '' : 's'} committed!`);
+				if (!argv.flags.noPostCommit) await runPostCommit(config, true);
 				return;
 			}
 		})().catch(handleCommandError);
