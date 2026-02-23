@@ -54,7 +54,13 @@ export default command(
 		name: 'install',
 		description: 'Install aicommits binary to system PATH (~/.local/bin or /usr/local/bin)',
 		help: {
-			description: 'Install aicommits binary to system PATH (~/.local/bin or /usr/local/bin)',
+			description: `Install aicommits binary to system PATH (~/.local/bin or /usr/local/bin)
+
+Examples:
+  aicommits install                    Install to ~/.local/bin (user scope)
+  aicommits install --scope system     Install to /usr/local/bin (needs sudo)
+  aicommits install --bin-dir ~/bin    Install to a custom directory
+  aicommits install --info             Show current installation details`,
 		},
 		parameters: [],
 		flags: {

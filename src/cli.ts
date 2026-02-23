@@ -128,7 +128,17 @@ cli(
 		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand, doctorCommand],
 
 		help: {
-			description,
+			description: `${description}
+
+Examples:
+  aicommits                        Generate a commit message for staged changes
+  aicommits -y                     Generate and commit without confirmation
+  aicommits -a -y                  Stage all tracked changes, generate, and commit
+  aicommits -g 3                   Generate 3 message options to choose from
+  aicommits -t conventional        Use conventional commit format
+  aicommits -p "write in German"   Guide the AI with a custom prompt
+  aicommits config info            Show config sources and active settings
+  aicommits setup                  Interactive provider/model setup`,
 		},
 
 		ignoreArgv: (type) => type === 'unknown-flag' || type === 'argument',

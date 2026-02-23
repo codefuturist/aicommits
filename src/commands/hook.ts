@@ -27,7 +27,11 @@ export default command(
 		name: 'hook',
 		description: 'Install or uninstall the Git hook for automatic commit messages',
 		help: {
-			description: 'Install or uninstall the Git hook for automatic commit messages',
+			description: `Install or uninstall the Git hook for automatic commit messages
+
+Examples:
+  aicommits hook install               Add prepare-commit-msg hook to current repo
+  aicommits hook uninstall             Remove the hook from current repo`,
 		},
 		parameters: ['<install/uninstall>'],
 	},

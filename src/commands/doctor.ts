@@ -26,7 +26,11 @@ export default command(
 		name: 'doctor',
 		description: 'Diagnose installation issues and detect PATH conflicts',
 		help: {
-			description: 'Diagnose installation issues and detect PATH conflicts',
+			description: `Diagnose installation issues and detect PATH conflicts
+
+Examples:
+  aicommits doctor                     Check for duplicate binaries in PATH
+  aicommits doctor --fix               Interactively remove shadowed duplicates`,
 		},
 		parameters: [],
 		flags: {

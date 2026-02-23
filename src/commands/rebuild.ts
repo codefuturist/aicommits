@@ -14,7 +14,12 @@ export default command(
 		name: 'rebuild',
 		description: 'Rebuild the project from source (detects project type automatically)',
 		help: {
-			description: 'Rebuild the project from source (detects project type automatically)',
+			description: `Rebuild the project from source (detects project type automatically)
+
+Examples:
+  aicommits rebuild                    Rebuild if source has changed
+  aicommits rebuild --clean            Clean dist/ and rebuild from scratch
+  aicommits rebuild --info             Show build metadata and freshness`,
 		},
 		parameters: [],
 		flags: {
