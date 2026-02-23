@@ -116,9 +116,11 @@ const configParsers = {
 		parseAssert('post-commit-rebuild', ['smart', 'always', 'off'].includes(v), 'Must be smart, always, or off');
 		return v as 'smart' | 'always' | 'off';
 	},
-	'post-commit-install'(value?: string) {
-		if (!value || value.trim() === '') return false;
-		const v = value.trim().toLowerCase();
+	'post-commit-install'(value?: string | boolean) {
+		if (value === undefined || value === null) return false;
+		if (typeof value === 'boolean') return value;
+		const v = String(value).trim().toLowerCase();
+		if (v === '') return false;
 		return v === 'true' || v === '1' || v === 'yes';
 	},
 	'post-commit-branches'(value?: string) {
