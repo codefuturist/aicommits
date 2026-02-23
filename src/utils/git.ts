@@ -186,3 +186,35 @@ export const getUnstagedDiffStat = async (files: string[]) => {
 	]);
 	return stdout;
 };
+
+export const getPartiallyStaged = async (): Promise<string[]> => {
+	const { stdout: staged } = await execa('git', [
+		'diff', '--cached', '--name-only',
+	]);
+	const { stdout: unstaged } = await execa('git', [
+		'diff', '--name-only',
+	]);
+	const stagedSet = new Set(staged.split('\n').filter(Boolean));
+	return unstaged.split('\n').filter(Boolean).filter((f) => stagedSet.has(f));
+};
+
+export const unstageFiles = async (files: string[]) => {
+	if (files.length === 0) return;
+	await execa('git', ['reset', 'HEAD', '--', ...files]);
+};
+
+export const getStagedDiffForBoundary = async (files: string[]) => {
+	if (files.length === 0) return '';
+	const { stdout } = await execa('git', [
+		'diff', '--cached', '--diff-algorithm=minimal', '--', ...files,
+	]);
+	return stdout;
+};
+
+export const getStagedDiffStat = async (files: string[]) => {
+	if (files.length === 0) return '';
+	const { stdout } = await execa('git', [
+		'diff', '--cached', '--stat', '--diff-algorithm=minimal', '--', ...files,
+	]);
+	return stdout;
+};

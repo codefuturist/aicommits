@@ -5,7 +5,10 @@ import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
 import { generatePrompt, commitTypeFormats } from './prompt.js';
 import type { ProjectBoundary } from './project-detection.js';
-import { getUnstagedDiffForFiles, getUnstagedDiffStat } from './git.js';
+import {
+	getUnstagedDiffForFiles, getUnstagedDiffStat,
+	getStagedDiffForBoundary, getStagedDiffStat,
+} from './git.js';
 
 /**
  * Extracts the actual response from reasoning model outputs.
@@ -364,26 +367,28 @@ const BOUNDARY_DELAY_MS = 6500;
  * Build a focused diff for a boundary based on its size.
  * Small boundaries get full diff, large ones get stat summary.
  */
-async function getBoundaryDiff(boundary: ProjectBoundary, fullDiff: string): Promise<string> {
+async function getBoundaryDiff(boundary: ProjectBoundary, fullDiff: string, staged?: boolean): Promise<string> {
 	const { files } = boundary;
+	const getDiff = staged ? getStagedDiffForBoundary : getUnstagedDiffForFiles;
+	const getStat = staged ? getStagedDiffStat : getUnstagedDiffStat;
 
 	// For small boundaries, extract relevant parts from the full diff or get fresh
 	if (files.length <= 30) {
-		const focusedDiff = await getUnstagedDiffForFiles(files);
+		const focusedDiff = await getDiff(files);
 		if (focusedDiff.length <= 30000) return focusedDiff;
 		return focusedDiff.substring(0, 30000) + '\n\n[Diff truncated]';
 	}
 
 	// For medium boundaries, stat + partial diff
 	if (files.length <= 100) {
-		const stat = await getUnstagedDiffStat(files);
-		const partialDiff = await getUnstagedDiffForFiles(files.slice(0, 20));
+		const stat = await getStat(files);
+		const partialDiff = await getDiff(files.slice(0, 20));
 		const combined = `Diff stat:\n${stat}\n\nPartial diff (first 20 files):\n${partialDiff}`;
 		return combined.length > 30000 ? combined.substring(0, 30000) + '\n\n[Truncated]' : combined;
 	}
 
 	// For large boundaries, stat only
-	const stat = await getUnstagedDiffStat(files);
+	const stat = await getStat(files);
 	return `Diff stat (${files.length} files):\n${stat}`;
 }
 
@@ -403,6 +408,7 @@ export const groupBoundariesWithAI = async (
 	timeout: number,
 	customPrompt?: string,
 	onBoundaryStart?: (name: string, index: number, total: number) => void,
+	staged?: boolean,
 ): Promise<{ groups: CommitGroup[]; usage: any }> => {
 	const allGroups: CommitGroup[] = [];
 	let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
@@ -419,7 +425,7 @@ export const groupBoundariesWithAI = async (
 		onBoundaryStart?.(boundary.name, i, boundaries.length);
 
 		// Get focused diff for this boundary
-		const diff = await getBoundaryDiff(boundary, fullDiff);
+		const diff = await getBoundaryDiff(boundary, fullDiff, staged);
 
 		// Build boundary context hint
 		const contextHint = `Project boundary: "${boundary.name}" (${boundary.type}). ${boundary.files.length} files.`;

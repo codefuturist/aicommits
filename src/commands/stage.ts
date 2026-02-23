@@ -14,6 +14,9 @@ import {
 import {
 	assertGitRepo,
 	getUnstagedChanges,
+	getStagedDiff,
+	getPartiallyStaged,
+	unstageFiles,
 	stageFiles,
 } from '../utils/git.js';
 import { getConfig } from '../utils/config-runtime.js';
@@ -37,6 +40,12 @@ export default command(
 				type: Boolean,
 				description: 'Include untracked files (default: tracked only)',
 				alias: 'a',
+				default: false,
+			},
+			staged: {
+				type: Boolean,
+				description: 'Group already-staged files into multiple commits',
+				alias: 'S',
 				default: false,
 			},
 			yes: {
@@ -83,42 +92,114 @@ export default command(
 			intro(bgCyan(black(' aicommits · smart stage ')));
 
 			const repoRoot = await assertGitRepo();
+			const isStaged = argv.flags.staged;
 
-			const detectingFiles = spinner();
-			detectingFiles.start('Detecting unstaged changes');
-
-			const changes = await getUnstagedChanges(argv.flags.all);
-
-			if (!changes) {
-				detectingFiles.stop('No changes detected');
+			// Validate mutually exclusive flags
+			if (isStaged && argv.flags.all) {
 				throw new KnownError(
-					'No unstaged changes found. Make some changes first, or use `--all` to include untracked files.'
+					'--staged and --all are mutually exclusive. --all includes untracked files (unstaged mode only).'
 				);
 			}
 
-			let { files, modifiedFiles, untrackedFiles, diff } = changes;
+			const detectingFiles = spinner();
+			let files: string[];
+			let diff: string;
 
-			// Apply --scope filter
-			if (argv.flags.scope) {
-				const scope = argv.flags.scope.replace(/\/$/, ''); // trim trailing slash
-				files = files.filter((f) => f.startsWith(scope + '/') || f === scope);
-				modifiedFiles = modifiedFiles.filter((f) => f.startsWith(scope + '/') || f === scope);
-				untrackedFiles = untrackedFiles.filter((f) => f.startsWith(scope + '/') || f === scope);
+			if (isStaged) {
+				// Staged mode: work with files already in the git index
+				detectingFiles.start('Detecting staged changes');
 
-				if (files.length === 0) {
-					detectingFiles.stop('No changes in scope');
-					throw new KnownError(`No unstaged changes found in scope: ${scope}`);
+				const stagedResult = await getStagedDiff();
+				if (!stagedResult) {
+					detectingFiles.stop('No staged changes detected');
+					throw new KnownError(
+						'No staged changes found. Stage some files with `git add` first, or omit `--staged` to work with unstaged changes.'
+					);
 				}
-			}
 
-			let filesSummary = `📁 Detected ${files.length} changed file${files.length === 1 ? '' : 's'}`;
-			if (untrackedFiles.length > 0) {
-				filesSummary += ` (${modifiedFiles.length} modified, ${untrackedFiles.length} untracked)`;
+				files = stagedResult.files;
+				diff = stagedResult.diff;
+
+				// Apply --scope filter
+				if (argv.flags.scope) {
+					const scope = argv.flags.scope.replace(/\/$/, '');
+					files = files.filter((f) => f.startsWith(scope + '/') || f === scope);
+					if (files.length === 0) {
+						detectingFiles.stop('No staged changes in scope');
+						throw new KnownError(`No staged changes found in scope: ${scope}`);
+					}
+				}
+
+				let filesSummary = `📦 Detected ${files.length} staged file${files.length === 1 ? '' : 's'}`;
+				if (files.length <= 15) {
+					filesSummary += `:\n${files.map((f) => `     ${f}`).join('\n')}`;
+				}
+				detectingFiles.stop(filesSummary);
+
+				// Warn about partially staged files
+				if (!argv.flags.dryRun && !argv.flags.scan) {
+					const partiallyStaged = await getPartiallyStaged();
+					const relevant = partiallyStaged.filter((f) => files.includes(f));
+
+					if (relevant.length > 0) {
+						console.log('');
+						console.log(`  ${yellow('⚠')}  ${yellow(`${relevant.length} file${relevant.length === 1 ? ' is' : 's are'} partially staged:`)}`);
+						const show = relevant.slice(0, 5);
+						for (const f of show) {
+							console.log(`     ${dim('·')} ${f}`);
+						}
+						if (relevant.length > 5) {
+							console.log(`     ${dim(`… and ${relevant.length - 5} more`)}`);
+						}
+						console.log(`  ${dim('Proceeding will stage ALL changes for these files (partial staging will be lost).')}`);
+						console.log('');
+
+						if (!argv.flags.yes) {
+							const proceed = await confirm({
+								message: 'Continue anyway?',
+							});
+							if (isCancel(proceed) || !proceed) {
+								outro('Cancelled');
+								return;
+							}
+						}
+					}
+				}
+			} else {
+				// Unstaged mode (default)
+				detectingFiles.start('Detecting unstaged changes');
+
+				const changes = await getUnstagedChanges(argv.flags.all);
+				if (!changes) {
+					detectingFiles.stop('No changes detected');
+					throw new KnownError(
+						'No unstaged changes found. Make some changes first, or use `--all` to include untracked files.'
+					);
+				}
+
+				let { files: allFiles, modifiedFiles, untrackedFiles, diff: unstagedDiff } = changes;
+				files = allFiles;
+				diff = unstagedDiff;
+
+				// Apply --scope filter
+				if (argv.flags.scope) {
+					const scope = argv.flags.scope.replace(/\/$/, '');
+					files = files.filter((f) => f.startsWith(scope + '/') || f === scope);
+					if (files.length === 0) {
+						detectingFiles.stop('No changes in scope');
+						throw new KnownError(`No unstaged changes found in scope: ${scope}`);
+					}
+				}
+
+				let filesSummary = `📁 Detected ${files.length} changed file${files.length === 1 ? '' : 's'}`;
+				if (untrackedFiles.length > 0) {
+					filesSummary += ` (${modifiedFiles.length} modified, ${untrackedFiles.length} untracked)`;
+				}
+				if (files.length <= 15) {
+					filesSummary += `:\n${files.map((f) => `     ${f}`).join('\n')}`;
+				}
+				detectingFiles.stop(filesSummary);
 			}
-			if (files.length <= 15) {
-				filesSummary += `:\n${files.map((f) => `     ${f}`).join('\n')}`;
-			}
-			detectingFiles.stop(filesSummary);
 
 			// --scan mode: show boundaries and exit (no AI needed)
 			if (argv.flags.scan) {
@@ -223,6 +304,7 @@ export default command(
 					(name, index, total) => {
 						s.message(`🤖 [${index + 1}/${total}] Analyzing ${name}...`);
 					},
+					isStaged,
 				);
 
 				groups = result.groups;
@@ -282,7 +364,7 @@ export default command(
 
 			// Auto-commit mode
 			if (argv.flags.yes) {
-				await commitGroups(groups);
+				await commitGroups(groups, isStaged, files);
 				outro(`${green('✔')} All ${groups.length} group${groups.length === 1 ? '' : 's'} committed!`);
 				return;
 			}
@@ -304,7 +386,7 @@ export default command(
 			}
 
 			if (action === 'all') {
-				await commitGroups(groups);
+				await commitGroups(groups, isStaged, files);
 				outro(`${green('✔')} All ${groups.length} group${groups.length === 1 ? '' : 's'} committed!`);
 				return;
 			}
@@ -326,7 +408,7 @@ export default command(
 				}
 
 				const selectedGroups = (selected as number[]).map((i) => groups[i]);
-				await commitGroups(selectedGroups);
+				await commitGroups(selectedGroups, isStaged, files);
 				outro(`${green('✔')} ${selectedGroups.length} group${selectedGroups.length === 1 ? '' : 's'} committed!`);
 				return;
 			}
@@ -348,7 +430,7 @@ export default command(
 					editedGroups.push({ ...group, message: newMessage as string });
 				}
 
-				await commitGroups(editedGroups);
+				await commitGroups(editedGroups, isStaged, files);
 				outro(`${green('✔')} All ${editedGroups.length} group${editedGroups.length === 1 ? '' : 's'} committed!`);
 				return;
 			}
@@ -356,15 +438,48 @@ export default command(
 	}
 );
 
-async function commitGroups(groups: CommitGroup[]) {
-	for (let i = 0; i < groups.length; i++) {
-		const group = groups[i];
-		const progress = spinner();
-		progress.start(`[${i + 1}/${groups.length}] Staging & committing: ${dim(group.message)}`);
+async function commitGroups(groups: CommitGroup[], staged?: boolean, allFiles?: string[]) {
+	// In staged mode: unstage all files first, then re-stage per group
+	if (staged && allFiles) {
+		// Collect all files that will be committed
+		const committedFiles = new Set<string>();
 
-		await stageFiles(group.files);
-		await execa('git', ['commit', '-m', group.message]);
+		for (let i = 0; i < groups.length; i++) {
+			const group = groups[i];
+			const progress = spinner();
+			progress.start(`[${i + 1}/${groups.length}] Committing: ${dim(group.message)}`);
 
-		progress.stop(`${green('✔')} [${i + 1}/${groups.length}] ${group.message}`);
+			// Unstage files not in this group (that haven't been committed yet)
+			const remainingFiles = allFiles.filter(
+				(f) => !committedFiles.has(f) && !group.files.includes(f),
+			);
+			await unstageFiles(remainingFiles);
+
+			// Ensure this group's files are staged
+			await stageFiles(group.files);
+			await execa('git', ['commit', '-m', group.message]);
+
+			for (const f of group.files) committedFiles.add(f);
+
+			// Re-stage remaining files for the next iteration
+			const nextRemaining = allFiles.filter((f) => !committedFiles.has(f));
+			if (nextRemaining.length > 0) {
+				await stageFiles(nextRemaining);
+			}
+
+			progress.stop(`${green('✔')} [${i + 1}/${groups.length}] ${group.message}`);
+		}
+	} else {
+		// Unstaged mode: stage and commit each group
+		for (let i = 0; i < groups.length; i++) {
+			const group = groups[i];
+			const progress = spinner();
+			progress.start(`[${i + 1}/${groups.length}] Staging & committing: ${dim(group.message)}`);
+
+			await stageFiles(group.files);
+			await execa('git', ['commit', '-m', group.message]);
+
+			progress.stop(`${green('✔')} [${i + 1}/${groups.length}] ${group.message}`);
+		}
 	}
 }
