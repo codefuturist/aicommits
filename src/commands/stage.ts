@@ -417,10 +417,22 @@ export default command(
 				console.log('');
 			}
 
-			// Dry-run mode: stop here
+			// Dry-run mode: show preview, optionally proceed
 			if (argv.flags.dryRun) {
-				outro(`${dim('Dry run — no changes were made')}`);
-				return;
+				if (!argv.flags.yes && process.stdout.isTTY) {
+					const proceed = await confirm({
+						message: 'Would you like to proceed and commit these groups?',
+					});
+					if (!isCancel(proceed) && proceed) {
+						// Fall through to interactive commit flow below
+					} else {
+						outro(`${dim('Dry run — no changes were made')}`);
+						return;
+					}
+				} else {
+					outro(`${dim('Dry run — no changes were made')}`);
+					return;
+				}
 			}
 
 			// Auto-commit mode
