@@ -1,8 +1,10 @@
 .vscode/**
 .vscode-test/**
 src/**
+tests/**
 .gitignore
 tsconfig.json
+tsconfig.test.json
 pnpm-lock.yaml
 **/*.map
 **/node_modules/**
