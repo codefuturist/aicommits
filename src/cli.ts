@@ -41,7 +41,11 @@ if (!isCalledFromGitHook && version === '0.0.0-semantic-release') {
 	const hasNoRebuildFlag = rawArgs.includes('--no-rebuild');
 
 	if (!hasNoRebuildFlag && !isRebuildCommand && !isInstallCommand) {
-		checkAndRebuildIfStale({ force: hasRebuildFlag });
+		// Skip stale check for informational flags that don't need a fresh build
+		const isHelpOrVersion = rawArgs.includes('-h') || rawArgs.includes('--help') || rawArgs.includes('-v') || rawArgs.includes('--version');
+		if (!isHelpOrVersion) {
+			checkAndRebuildIfStale({ force: hasRebuildFlag });
+		}
 	}
 }
 
