@@ -1,13 +1,10 @@
 import { execa } from 'execa';
-import { black, dim, green, red, yellow, bgCyan } from 'kolorist';
+import { black, green, yellow, bgCyan } from 'kolorist';
 import { copyToClipboard as copyMessage } from '../utils/clipboard.js';
 import {
 	intro,
 	outro,
 	spinner,
-	select,
-	confirm,
-	isCancel,
 } from '@clack/prompts';
 import {
 	assertGitRepo,
@@ -15,7 +12,7 @@ import {
 	getStagedDiffForFiles,
 	getDetectedMessage,
 } from '../utils/git.js';
-import { getConfig, setConfigs } from '../utils/config-runtime.js';
+import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import {
 	generateCommitMessage,
@@ -68,7 +65,6 @@ export default async (
 			detectingFiles.stop(`📁 ${getDetectedMessage(staged.files)}`);
 		}
 
-		const { env } = process;
 		const config = await getConfig({
 			generate: generate?.toString(),
 			type: commitType?.toString(),
@@ -187,11 +183,8 @@ export default async (
 					baseUrl,
 					apiKey,
 					config.model!,
-					config.locale,
 					config['max-length'],
-					config.type,
 					timeout,
-					customPrompt
 				);
 				messages = combineResult.messages;
 				if (combineResult.usage) {

@@ -1,5 +1,4 @@
 import { command } from 'cleye';
-import { red } from 'kolorist';
 import { hasOwn } from '../utils/config-types.js';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { KnownError, handleCommandError } from '../utils/error.js';

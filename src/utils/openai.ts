@@ -3,7 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
-import { generatePrompt, commitTypeFormats } from './prompt.js';
+import { generatePrompt } from './prompt.js';
 import type { ProjectBoundary } from './project-detection.js';
 import {
 	getUnstagedDiffForFiles, getUnstagedDiffStat,
@@ -201,11 +201,8 @@ export const combineCommitMessages = async (
 	baseUrl: string,
 	apiKey: string,
 	model: string,
-	locale: string,
 	maxLength: number,
-	type: CommitType,
 	timeout: number,
-	customPrompt?: string
 ) => {
 	try {
 		const provider =
@@ -367,7 +364,7 @@ const BOUNDARY_DELAY_MS = 6500;
  * Build a focused diff for a boundary based on its size.
  * Small boundaries get full diff, large ones get stat summary.
  */
-async function getBoundaryDiff(boundary: ProjectBoundary, fullDiff: string, staged?: boolean): Promise<string> {
+async function getBoundaryDiff(boundary: ProjectBoundary, staged?: boolean): Promise<string> {
 	const { files } = boundary;
 	const getDiff = staged ? getStagedDiffForBoundary : getUnstagedDiffForFiles;
 	const getStat = staged ? getStagedDiffStat : getUnstagedDiffStat;
@@ -402,7 +399,6 @@ export const groupBoundariesWithAI = async (
 	model: string,
 	locale: string,
 	boundaries: ProjectBoundary[],
-	fullDiff: string,
 	maxGroupsPerBoundary: number,
 	type: CommitType,
 	timeout: number,
@@ -425,7 +421,7 @@ export const groupBoundariesWithAI = async (
 		onBoundaryStart?.(boundary.name, i, boundaries.length);
 
 		// Get focused diff for this boundary
-		const diff = await getBoundaryDiff(boundary, fullDiff, staged);
+		const diff = await getBoundaryDiff(boundary, staged);
 
 		// Build boundary context hint
 		const contextHint = `Project boundary: "${boundary.name}" (${boundary.type}). ${boundary.files.length} files.`;

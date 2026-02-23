@@ -1,6 +1,6 @@
 import { command } from 'cleye';
 import { execa } from 'execa';
-import { black, green, red, yellow, dim, bgCyan } from 'kolorist';
+import { black, green, yellow, dim, bgCyan } from 'kolorist';
 import {
 	intro,
 	outro,
@@ -242,7 +242,6 @@ export default command(
 			const apiKey = providerInstance.getApiKey() || '';
 
 			let groups: CommitGroup[];
-			let usage: any;
 
 			// Use boundary detection for large changesets
 			if (files.length > BOUNDARY_THRESHOLD) {
@@ -297,7 +296,6 @@ export default command(
 					config.model!,
 					config.locale,
 					selectedBoundaries,
-					diff,
 					maxGroups,
 					config.type,
 					timeout,
@@ -309,7 +307,6 @@ export default command(
 				);
 
 				groups = result.groups;
-				usage = result.usage;
 				const duration = Date.now() - startTime;
 				s.stop(`✅ Grouped into ${groups.length} commit${groups.length === 1 ? '' : 's'} in ${(duration / 1000).toFixed(1)}s`);
 			} else {
@@ -332,7 +329,6 @@ export default command(
 				);
 
 				groups = result.groups;
-				usage = result.usage;
 				const duration = Date.now() - startTime;
 				s.stop(`✅ Grouped into ${groups.length} commit${groups.length === 1 ? '' : 's'} in ${(duration / 1000).toFixed(1)}s`);
 			}

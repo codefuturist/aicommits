@@ -1,5 +1,5 @@
 import { command } from 'cleye';
-import { outro, log } from '@clack/prompts';
+import { outro } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { selectModel } from '../feature/models.js';

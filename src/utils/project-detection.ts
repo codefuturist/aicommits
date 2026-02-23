@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { join, dirname, relative } from 'path';
+import { join, dirname } from 'path';
 import { execa } from 'execa';
 import type { CommitGroup } from './openai.js';
 

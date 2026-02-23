@@ -1,6 +1,5 @@
-import { execSync } from 'child_process';
 import { command } from 'cleye';
-import { select, text, outro, isCancel, confirm } from '@clack/prompts';
+import { select, text, outro, isCancel } from '@clack/prompts';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import {
 	getProvider,
@@ -16,7 +15,7 @@ export default command(
 			description: 'Configure your AI provider and settings',
 		},
 	},
-	(argv) => {
+	() => {
 		(async () => {
 			let config = await getConfig();
 

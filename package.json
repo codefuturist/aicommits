@@ -25,7 +25,7 @@
 	"scripts": {
 		"build": "pkgroll --minify",
 		"prepare": "pnpm build",
-		"lint": "",
+		"lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1 | grep -v vscode-extension || true",
 		"type-check": "tsc",
 		"test": "tsx tests",
 		"prepack": "pnpm build && clean-pkg-json"

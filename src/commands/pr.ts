@@ -1,7 +1,7 @@
 import { command } from 'cleye';
 import { execa } from 'execa';
 import { black, green, bgCyan } from 'kolorist';
-import { intro, outro, spinner, confirm, isCancel } from '@clack/prompts';
+import { intro, outro, spinner, isCancel } from '@clack/prompts';
 import { assertGitRepo } from '../utils/git.js';
 import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
