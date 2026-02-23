@@ -19,7 +19,15 @@ export default command(
 		name: 'config',
 		description: 'View or modify configuration settings',
 		help: {
-			description: 'View or modify configuration settings',
+			description: `View or modify configuration settings
+
+Modes:
+  (none)   Show active config summary
+  get      Get a config value:   aicommits config get OPENAI_API_KEY
+  set      Set a config value:   aicommits config set OPENAI_MODEL=gpt-4o
+  info     Show all config sources and precedence
+  migrate  Move legacy ~/.aicommits to XDG path (~/.config/aicommits/config)
+  path     Print the resolved config file path`,
 		},
 		parameters: ['[mode]', '[key=value...]'],
 	},
