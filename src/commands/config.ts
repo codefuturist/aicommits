@@ -1,7 +1,18 @@
 import { command } from 'cleye';
+import fs from 'fs';
 import { hasOwn } from '../utils/config-types.js';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
+import {
+	resolveConfigPath,
+	getConfigFilePath,
+	getConfigDir,
+	getLegacyConfigPath,
+	getProjectConfigPath,
+	getSystemConfigPaths,
+	getCacheDir,
+} from '../utils/paths.js';
+import { green, dim, yellow, bold } from 'kolorist';
 
 export default command(
 	{
@@ -57,6 +68,94 @@ export default command(
 						return [keyValue.slice(0, idx), keyValue.slice(idx + 1)] as [string, string];
 					})
 				);
+				return;
+			}
+
+			if (mode === 'info') {
+				const activeConfig = resolveConfigPath();
+				const xdgPath = getConfigFilePath();
+				const legacyPath = getLegacyConfigPath();
+				const projectPath = getProjectConfigPath();
+				const systemPaths = getSystemConfigPaths();
+				const cacheDir = getCacheDir();
+
+				console.log(bold('Configuration sources (highest precedence first):'));
+				console.log(`  1. CLI flags          ${dim('(active)')}`);
+
+				const envOverride = process.env.AICOMMITS_CONFIG;
+				console.log(
+					`  2. AICOMMITS_CONFIG   ${envOverride ? envOverride : dim('not set')}`,
+				);
+
+				console.log(
+					`  3. Project config     ${projectPath ? green(projectPath) : dim('not found')}`,
+				);
+
+				const xdgExists = fs.existsSync(xdgPath);
+				console.log(
+					`  4. User config (XDG)  ${xdgExists ? green(xdgPath) : dim(xdgPath + ' (not found)')}`,
+				);
+
+				const legacyExists = fs.existsSync(legacyPath);
+				if (legacyExists) {
+					console.log(
+						`     Legacy fallback    ${yellow(legacyPath + ' (active — run "aicommits config migrate")')}`,
+					);
+				}
+
+				const foundSystem = systemPaths.find((p) => fs.existsSync(p));
+				console.log(
+					`  5. System config      ${foundSystem ? green(foundSystem) : dim(systemPaths[0] + ' (not found)')}`,
+				);
+
+				console.log('');
+				console.log(`Active config:  ${bold(activeConfig)}`);
+				console.log(`Cache dir:      ${cacheDir}`);
+				return;
+			}
+
+			if (mode === 'migrate') {
+				const legacyPath = getLegacyConfigPath();
+				const xdgPath = getConfigFilePath();
+				const xdgDir = getConfigDir();
+
+				if (!fs.existsSync(legacyPath)) {
+					if (fs.existsSync(xdgPath)) {
+						console.log(`${green('✓')} Already using XDG config at ${xdgPath}`);
+					} else {
+						console.log(`No config file found. New config will be created at ${xdgPath}`);
+					}
+					return;
+				}
+
+				if (fs.existsSync(xdgPath)) {
+					console.log(
+						`${yellow('⚠')} Both legacy (${legacyPath}) and XDG (${xdgPath}) configs exist.`,
+					);
+					console.log(`  XDG config takes precedence. Remove the legacy file manually if desired.`);
+					return;
+				}
+
+				// Perform migration
+				console.log(`Moving config from ${legacyPath} to ${xdgPath}...`);
+
+				if (!fs.existsSync(xdgDir)) {
+					fs.mkdirSync(xdgDir, { recursive: true });
+					console.log(`  ${green('✓')} Created ${xdgDir}/`);
+				}
+
+				fs.copyFileSync(legacyPath, xdgPath);
+				console.log(`  ${green('✓')} Copied config file`);
+
+				fs.unlinkSync(legacyPath);
+				console.log(`  ${green('✓')} Removed legacy file`);
+
+				console.log(`\n${green('✓')} Migration complete! Config now at ${xdgPath}`);
+				return;
+			}
+
+			if (mode === 'path') {
+				console.log(resolveConfigPath());
 				return;
 			}
 

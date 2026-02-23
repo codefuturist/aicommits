@@ -1,12 +1,12 @@
 // Model filtering, fetching, and selection utilities
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 import crypto from 'crypto';
 import type { ProviderDef } from './providers/base.js';
 import { CURRENT_LABEL_FORMAT } from '../utils/constants.js';
 import { isCancel, spinner } from '@clack/prompts';
 import { fileExists } from '../utils/fs.js';
+import { getCacheDir as getAppCacheDir } from '../utils/paths.js';
 
 interface ModelObject {
 	id?: string;
@@ -22,19 +22,7 @@ interface CacheEntry {
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 
 const getCacheDir = (): string => {
-	const platform = process.platform;
-	const home = os.homedir();
-
-	if (platform === 'darwin') {
-		return path.join(home, 'Library', 'Caches', 'aicommits', 'models');
-	} else if (platform === 'win32') {
-		return path.join(home, 'AppData', 'Local', 'aicommits', 'models');
-	} else {
-		// Linux/Unix
-		const xdgCache = process.env.XDG_CACHE_HOME;
-		const baseCache = xdgCache ? xdgCache : path.join(home, '.cache');
-		return path.join(baseCache, 'aicommits', 'models');
-	}
+	return path.join(getAppCacheDir(), 'models');
 };
 
 const getCacheKey = (baseUrl: string): string => {

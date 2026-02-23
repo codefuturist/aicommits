@@ -6,7 +6,8 @@ import { createFixture } from '../utils.js';
 export default testSuite(({ describe }) => {
 	describe('config', async ({ test, describe }) => {
 		const { fixture, aicommits } = await createFixture();
-		const configPath = path.join(fixture.path, '.aicommits');
+		// XDG config path: $HOME/.config/aicommits/config (child process HOME = fixture.path)
+		const configPath = path.join(fixture.path, '.config', 'aicommits', 'config');
 		const openAiToken = 'OPENAI_API_KEY=abc';
 
 		test('set unknown config file', async () => {

@@ -1,12 +1,13 @@
 import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
 import { yellow, dim, green, bold } from 'kolorist';
 import {
 	checkBuildFreshness,
 	getProjectRootPath,
 	detectProjectType,
 } from './build-freshness.js';
+import { resolveConfigPath } from './paths.js';
 
 interface RebuildOptions {
 	force?: boolean;
@@ -14,8 +15,7 @@ interface RebuildOptions {
 
 function loadAutoRebuildConfig(): 'prompt' | 'auto' | 'off' {
 	try {
-		const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-		const configPath = join(homeDir, '.aicommits');
+		const configPath = resolveConfigPath();
 		if (!existsSync(configPath)) return 'prompt';
 
 		const raw = readFileSync(configPath, 'utf8');
@@ -32,8 +32,7 @@ function loadAutoRebuildConfig(): 'prompt' | 'auto' | 'off' {
 
 function loadConfigOverrides(): { buildCommand?: string; sourceDir?: string } {
 	try {
-		const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-		const configPath = join(homeDir, '.aicommits');
+		const configPath = resolveConfigPath();
 		if (!existsSync(configPath)) return {};
 
 		const raw = readFileSync(configPath, 'utf8');
@@ -96,9 +95,11 @@ export function checkAndRebuildIfStale(options: RebuildOptions = {}): void {
 			if (result === 'a' || result === 'always') {
 				// Set auto-rebuild=auto in config
 				try {
-					const { writeFileSync } = require('fs');
-					const homeDir = process.env.HOME || process.env.USERPROFILE || '';
-					const configPath = join(homeDir, '.aicommits');
+					const configPath = resolveConfigPath();
+					const configDir = dirname(configPath);
+					if (!existsSync(configDir)) {
+						mkdirSync(configDir, { recursive: true });
+					}
 					let content = '';
 					try { content = readFileSync(configPath, 'utf8'); } catch { /* empty */ }
 
@@ -108,7 +109,7 @@ export function checkAndRebuildIfStale(options: RebuildOptions = {}): void {
 						content += '\nauto-rebuild=auto';
 					}
 					writeFileSync(configPath, content);
-					console.log(dim('  Set auto-rebuild=auto in ~/.aicommits'));
+					console.log(dim(`  Set auto-rebuild=auto in ${configPath}`));
 				} catch { /* ignore config write failure */ }
 				rebuild(buildCommand, projectRoot);
 			} else if (result === '' || result === 'y' || result === 'yes') {

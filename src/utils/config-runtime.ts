@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 import ini from 'ini';
+import { existsSync, mkdirSync } from 'fs';
 import { fileExists } from './fs.js';
 import { KnownError } from './error.js';
 import {
@@ -12,6 +12,12 @@ import {
 	type RawConfig,
 } from './config-types.js';
 import { providers } from '../feature/providers/providers-data.js';
+import {
+	resolveConfigPath,
+	getProjectConfigPath,
+	getSystemConfigPaths,
+	isUsingLegacyConfig,
+} from './paths.js';
 
 const getDefaultBaseUrl = (): string => {
 	const openaiProvider = providers.find((p) => p.name === 'openai');
@@ -40,16 +46,50 @@ const detectProvider = (
 	}
 };
 
-const getConfigPath = () => path.join(os.homedir(), '.aicommits');
+const getConfigPath = () => resolveConfigPath();
+
+/** Keys that should never be stored in per-project config files */
+const SENSITIVE_KEYS = new Set<string>([
+	'OPENAI_API_KEY',
+	'TOGETHER_API_KEY',
+	'api-key',
+]);
 
 const readConfigFile = async (): Promise<RawConfig> => {
-	const configExists = await fileExists(getConfigPath());
+	const configPath = getConfigPath();
+	const configExists = await fileExists(configPath);
 	if (!configExists) {
 		return Object.create(null);
 	}
 
-	const configString = await fs.readFile(getConfigPath(), 'utf8');
+	const configString = await fs.readFile(configPath, 'utf8');
 	return ini.parse(configString);
+};
+
+/** Read project-level .aicommits from the git root (if it exists) */
+const readProjectConfig = async (): Promise<RawConfig> => {
+	const projectPath = getProjectConfigPath();
+	if (!projectPath) return Object.create(null);
+
+	const configString = await fs.readFile(projectPath, 'utf8');
+	const raw = ini.parse(configString);
+
+	// Strip sensitive keys from project config — they belong in user config only
+	for (const key of SENSITIVE_KEYS) {
+		delete raw[key as keyof typeof raw];
+	}
+	return raw;
+};
+
+/** Read system-wide config from $XDG_CONFIG_DIRS/aicommits/config */
+const readSystemConfig = async (): Promise<RawConfig> => {
+	for (const sysPath of getSystemConfigPaths()) {
+		if (await fileExists(sysPath)) {
+			const configString = await fs.readFile(sysPath, 'utf8');
+			return ini.parse(configString);
+		}
+	}
+	return Object.create(null);
 };
 
 export const getConfig = async (
@@ -57,7 +97,22 @@ export const getConfig = async (
 	envConfig?: RawConfig,
 	suppressErrors?: boolean
 ): Promise<ValidConfig> => {
-	const config = await readConfigFile();
+	// Precedence: CLI flags > env vars > project config > user config > system config
+	const systemConfig = await readSystemConfig();
+	const userConfig = await readConfigFile();
+	const projectConfig = await readProjectConfig();
+	const config = { ...systemConfig, ...userConfig, ...projectConfig };
+
+	// Show one-time migration hint (stderr, non-blocking)
+	if (isUsingLegacyConfig() && !process.env.AICOMMITS_QUIET) {
+		const xdgPath = resolveConfigPath();
+		if (xdgPath.includes('.aicommits') && !process.env._AICOMMITS_LEGACY_HINT_SHOWN) {
+			process.env._AICOMMITS_LEGACY_HINT_SHOWN = '1';
+			console.error(
+				`ℹ Config at ~/.aicommits (legacy). Run 'aicommits config migrate' to move to XDG path.`,
+			);
+		}
+	}
 
 	// Check for deprecated config properties
 	if (hasOwn(config, 'proxy')) {
@@ -112,5 +167,10 @@ export const setConfigs = async (keyValues: [key: string, value: string][]) => {
 		}
 	}
 
-	await fs.writeFile(getConfigPath(), ini.stringify(config), 'utf8');
+	const configPath = getConfigPath();
+	const configDir = path.dirname(configPath);
+	if (!existsSync(configDir)) {
+		mkdirSync(configDir, { recursive: true });
+	}
+	await fs.writeFile(configPath, ini.stringify(config), 'utf8');
 };
