@@ -37,7 +37,7 @@ export default command(
 			if (providerChoice === 'custom') {
 				const baseUrlInput = await text({
 					message: 'Enter your custom API endpoint:',
-					validate: (value: string) => {
+					validate: (value: string | undefined) => {
 						if (!value) return 'Endpoint is required';
 						try {
 							new URL(value);

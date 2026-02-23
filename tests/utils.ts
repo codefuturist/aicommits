@@ -31,11 +31,13 @@ const createAicommits = (fixture: FsFixture) => {
 };
 
 export const createGit = async (cwd: string) => {
-	const git = (command: string, args?: string[], options?: Options) =>
-		execa('git', [command, ...(args || [])], {
+	const git = async (command: string, args?: string[], options?: Options) => {
+		const result = await execa('git', [command, ...(args || [])], {
 			cwd,
 			...options,
 		});
+		return { ...result, stdout: String(result.stdout ?? '') };
+	};
 
 	await git('init', [
 		// In case of different default branch name

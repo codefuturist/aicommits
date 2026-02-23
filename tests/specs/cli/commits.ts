@@ -174,7 +174,7 @@ export default testSuite(({ describe }) => {
 			});
 
 			const { stdout } = await committing;
-			const countChoices = stdout.match(/ {2}[●○]/g)?.length ?? 0;
+			const countChoices = (stdout as string).match(/ {2}[●○]/g)?.length ?? 0;
 
 			onTestFail(() => console.log({ stdout }));
 			expect(countChoices).toBe(2);

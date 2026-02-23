@@ -23,7 +23,7 @@
 		"aic": "dist/cli.mjs"
 	},
 	"scripts": {
-		"build": "pkgroll --minify",
+		"build": "pkgroll --minify --export-condition=node",
 		"prepare": "pnpm build",
 		"lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1 | grep -v vscode-extension || true",
 		"type-check": "tsc",
@@ -31,22 +31,27 @@
 		"prepack": "pnpm build && clean-pkg-json"
 	},
 	"devDependencies": {
-		"@clack/prompts": "^0.11.0",
-		"@types/ini": "^1.3.31",
-		"@types/node": "^24.10.1",
-		"clean-pkg-json": "^1.3.0",
-		"cleye": "^2.0.0",
-		"execa": "^7.0.0",
-		"fs-fixture": "^1.2.0",
-		"ini": "^3.0.1",
-		"kolorist": "^1.8.0",
-		"manten": "^0.7.0",
-		"ai": "^6.0.97",
 		"@ai-sdk/openai": "^3.0.30",
 		"@ai-sdk/openai-compatible": "^2.0.30",
-		"pkgroll": "^2.20.1",
+		"@clack/prompts": "^1.0.1",
+		"@types/ini": "^4.1.1",
+		"@types/node": "^25.3.0",
+		"ai": "^6.0.97",
+		"clean-pkg-json": "^1.3.0",
+		"cleye": "^2.2.1",
+		"execa": "^9.6.1",
+		"fs-fixture": "^2.11.0",
+		"ini": "^6.0.0",
+		"kolorist": "^1.8.0",
+		"manten": "^1.10.0",
+		"pkgroll": "^2.26.3",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
+	},
+	"pnpm": {
+		"overrides": {
+			"unicorn-magic": "0.4.0"
+		}
 	},
 	"release": {
 		"branches": [
