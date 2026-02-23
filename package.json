@@ -26,11 +26,11 @@
 		"prebuild": "node scripts/prebuild.mjs",
 		"build": "pkgroll --minify --export-condition=node",
 		"postbuild": "node scripts/postbuild.mjs",
-		"prepare": "pnpm build",
+		"prepare": "node scripts/prebuild.mjs && npx --yes pkgroll --minify --export-condition=node && node scripts/postbuild.mjs",
 		"lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1 | grep -v vscode-extension || true",
 		"type-check": "tsc",
 		"test": "tsx tests",
-		"prepack": "pnpm build && clean-pkg-json",
+		"prepack": "clean-pkg-json",
 		"compile": "bun build dist/cli.mjs --compile --minify --bytecode --outfile ./aicommits",
 		"compile:install": "bun build dist/cli.mjs --compile --minify --bytecode --outfile ./aicommits && node dist/cli.mjs install --binary"
 	},
