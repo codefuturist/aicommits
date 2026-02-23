@@ -4,6 +4,8 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { KnownError } from './error.js';
 import type { CommitType } from './config-types.js';
 import { generatePrompt, commitTypeFormats } from './prompt.js';
+import type { ProjectBoundary } from './project-detection.js';
+import { getUnstagedDiffForFiles, getUnstagedDiffStat } from './git.js';
 
 /**
  * Extracts the actual response from reasoning model outputs.
@@ -354,4 +356,99 @@ Return ONLY a JSON array, no other text:
 			usage: null,
 		};
 	}
+};
+
+const BOUNDARY_DELAY_MS = 6500;
+
+/**
+ * Build a focused diff for a boundary based on its size.
+ * Small boundaries get full diff, large ones get stat summary.
+ */
+async function getBoundaryDiff(boundary: ProjectBoundary, fullDiff: string): Promise<string> {
+	const { files } = boundary;
+
+	// For small boundaries, extract relevant parts from the full diff or get fresh
+	if (files.length <= 30) {
+		const focusedDiff = await getUnstagedDiffForFiles(files);
+		if (focusedDiff.length <= 30000) return focusedDiff;
+		return focusedDiff.substring(0, 30000) + '\n\n[Diff truncated]';
+	}
+
+	// For medium boundaries, stat + partial diff
+	if (files.length <= 100) {
+		const stat = await getUnstagedDiffStat(files);
+		const partialDiff = await getUnstagedDiffForFiles(files.slice(0, 20));
+		const combined = `Diff stat:\n${stat}\n\nPartial diff (first 20 files):\n${partialDiff}`;
+		return combined.length > 30000 ? combined.substring(0, 30000) + '\n\n[Truncated]' : combined;
+	}
+
+	// For large boundaries, stat only
+	const stat = await getUnstagedDiffStat(files);
+	return `Diff stat (${files.length} files):\n${stat}`;
+}
+
+/**
+ * Process multiple project boundaries, calling AI for each one.
+ * Returns merged commit groups from all boundaries.
+ */
+export const groupBoundariesWithAI = async (
+	baseUrl: string,
+	apiKey: string,
+	model: string,
+	locale: string,
+	boundaries: ProjectBoundary[],
+	fullDiff: string,
+	maxGroupsPerBoundary: number,
+	type: CommitType,
+	timeout: number,
+	customPrompt?: string,
+	onBoundaryStart?: (name: string, index: number, total: number) => void,
+): Promise<{ groups: CommitGroup[]; usage: any }> => {
+	const allGroups: CommitGroup[] = [];
+	let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+
+	for (let i = 0; i < boundaries.length; i++) {
+		const boundary = boundaries[i];
+
+		// Auto-grouped boundaries skip AI
+		if (boundary.autoGroup) {
+			allGroups.push(boundary.autoGroup);
+			continue;
+		}
+
+		onBoundaryStart?.(boundary.name, i, boundaries.length);
+
+		// Get focused diff for this boundary
+		const diff = await getBoundaryDiff(boundary, fullDiff);
+
+		// Build boundary context hint
+		const contextHint = `Project boundary: "${boundary.name}" (${boundary.type}). ${boundary.files.length} files.`;
+
+		const result = await groupChangesWithAI(
+			baseUrl,
+			apiKey,
+			model,
+			locale,
+			boundary.files,
+			diff,
+			maxGroupsPerBoundary,
+			type,
+			timeout,
+			customPrompt ? `${contextHint} ${customPrompt}` : contextHint,
+		);
+
+		allGroups.push(...result.groups);
+		if (result.usage) {
+			totalUsage.promptTokens += (result.usage as any).promptTokens || 0;
+			totalUsage.completionTokens += (result.usage as any).completionTokens || 0;
+			totalUsage.totalTokens += (result.usage as any).totalTokens || 0;
+		}
+
+		// Rate-limit delay between AI calls
+		if (i < boundaries.length - 1 && !boundaries[i + 1]?.autoGroup) {
+			await new Promise((r) => setTimeout(r, BOUNDARY_DELAY_MS));
+		}
+	}
+
+	return { groups: allGroups, usage: totalUsage };
 };

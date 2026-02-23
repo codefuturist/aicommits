@@ -163,3 +163,26 @@ export const getUnstagedChanges = async (includeUntracked?: boolean) => {
 export const stageFiles = async (files: string[]) => {
 	await execa('git', ['add', '--', ...files]);
 };
+
+export const getUnstagedDiffForFiles = async (files: string[]) => {
+	if (files.length === 0) return '';
+	const { stdout } = await execa('git', [
+		'diff',
+		'--diff-algorithm=minimal',
+		'--',
+		...files,
+	]);
+	return stdout;
+};
+
+export const getUnstagedDiffStat = async (files: string[]) => {
+	if (files.length === 0) return '';
+	const { stdout } = await execa('git', [
+		'diff',
+		'--stat',
+		'--diff-algorithm=minimal',
+		'--',
+		...files,
+	]);
+	return stdout;
+};
