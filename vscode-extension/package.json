@@ -1,14 +1,14 @@
 {
 	"name": "aicommits",
 	"displayName": "AI Commits",
-	"description": "Generate git commit messages using AI directly from VSCode's Git interface",
+	"description": "Generate git commit messages using AI directly from VS Code's Source Control panel — no CLI required",
 	"version": "1.0.0",
 	"publisher": "aicommits",
 	"license": "MIT",
 	"icon": "media/icon.png",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/nutlope/aicommits"
+		"url": "https://github.com/codefuturist/aicommits"
 	},
 	"engines": {
 		"vscode": "^1.85.0"
@@ -24,7 +24,10 @@
 		"ai",
 		"openai",
 		"gpt",
-		"llm"
+		"llm",
+		"copilot",
+		"conventional commits",
+		"gitmoji"
 	],
 	"main": "./dist/extension.js",
 	"activationEvents": [
@@ -35,10 +38,7 @@
 			{
 				"command": "aicommits.generate",
 				"title": "AI Commits: Generate Commit Message",
-				"icon": {
-					"light": "media/icon.png",
-					"dark": "media/icon.png"
-				}
+				"icon": "$(sparkle)"
 			},
 			{
 				"command": "aicommits.generateConventional",
@@ -51,12 +51,24 @@
 				"icon": "$(symbol-enum)"
 			},
 			{
+				"command": "aicommits.generateAndCommit",
+				"title": "AI Commits: Generate & Commit",
+				"icon": "$(check)"
+			},
+			{
+				"command": "aicommits.regenerate",
+				"title": "AI Commits: Regenerate Message",
+				"icon": "$(refresh)"
+			},
+			{
 				"command": "aicommits.setup",
-				"title": "AI Commits: Setup Provider"
+				"title": "AI Commits: Setup Provider",
+				"icon": "$(gear)"
 			},
 			{
 				"command": "aicommits.selectModel",
-				"title": "AI Commits: Select Model"
+				"title": "AI Commits: Select Model",
+				"icon": "$(server)"
 			}
 		],
 		"menus": {
@@ -73,30 +85,117 @@
 					"group": "1_modification@1",
 					"when": "scmProvider == git"
 				}
+			],
+			"commandPalette": [
+				{
+					"command": "aicommits.generate"
+				},
+				{
+					"command": "aicommits.generateConventional"
+				},
+				{
+					"command": "aicommits.generateGitmoji"
+				},
+				{
+					"command": "aicommits.generateAndCommit"
+				},
+				{
+					"command": "aicommits.regenerate"
+				},
+				{
+					"command": "aicommits.setup"
+				},
+				{
+					"command": "aicommits.selectModel"
+				}
 			]
 		},
+		"keybindings": [
+			{
+				"command": "aicommits.generate",
+				"key": "ctrl+k ctrl+g",
+				"mac": "cmd+k cmd+g",
+				"when": "!terminalFocus"
+			},
+			{
+				"command": "aicommits.generateAndCommit",
+				"key": "ctrl+k ctrl+c",
+				"mac": "cmd+k cmd+c",
+				"when": "!terminalFocus"
+			}
+		],
 		"configuration": {
 			"title": "AI Commits",
 			"properties": {
-				"aicommits.path": {
+				"aicommits.apiKey": {
 					"type": "string",
-					"default": "aicommits",
-					"description": "Path to the aicommits CLI binary (use 'aic' for short)"
+					"default": "",
+					"markdownDescription": "API key for the AI provider. **Recommended:** Use `AI Commits: Setup` command instead — it stores the key securely in your OS keychain. If set here, falls back to `~/.config/aicommits/config`.",
+					"order": 1
 				},
-				"aicommits.defaultType": {
+				"aicommits.baseUrl": {
 					"type": "string",
-					"default": "plain",
+					"default": "",
+					"markdownDescription": "Base URL for the OpenAI-compatible API. Leave empty to use the CLI config or default to `https://api.openai.com/v1`. Use `https://models.github.ai/inference` for GitHub Copilot.",
+					"order": 2
+				},
+				"aicommits.model": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "Model name (e.g., `gpt-4o-mini`, `openai/gpt-4.1`). Leave empty to use the CLI config.",
+					"order": 3
+				},
+				"aicommits.commitType": {
+					"type": "string",
+					"default": "",
 					"enum": [
+						"",
 						"plain",
 						"conventional",
 						"gitmoji"
 					],
-					"description": "Default commit message format"
+					"enumDescriptions": [
+						"Use CLI config (default)",
+						"Plain commit messages",
+						"Conventional Commits (feat:, fix:, etc.)",
+						"Gitmoji commits (🐛, ✨, etc.)"
+					],
+					"description": "Default commit message format. Leave empty to use the CLI config.",
+					"order": 4
+				},
+				"aicommits.locale": {
+					"type": "string",
+					"default": "",
+					"description": "Language for commit messages (e.g., en, de, fr). Leave empty to use the CLI config.",
+					"order": 5
+				},
+				"aicommits.maxLength": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"maximum": 200,
+					"markdownDescription": "Maximum commit message length. Set to `0` to use the CLI config (default: 72).",
+					"order": 6
+				},
+				"aicommits.generateCount": {
+					"type": "number",
+					"default": 0,
+					"minimum": 0,
+					"maximum": 5,
+					"markdownDescription": "Number of suggestions to generate. Set to `0` to use the CLI config (default: 1). When >1, shows a picker to choose.",
+					"order": 7
+				},
+				"aicommits.customPrompt": {
+					"type": "string",
+					"default": "",
+					"description": "Additional instructions appended to the AI prompt (e.g., 'Use British English spelling').",
+					"order": 8
 				},
 				"aicommits.autoCommit": {
 					"type": "boolean",
 					"default": false,
-					"description": "Automatically commit after generating the message (skips preview)"
+					"description": "Automatically commit after generating the message (skips preview).",
+					"order": 9
 				}
 			}
 		}
@@ -105,7 +204,7 @@
 		"vscode:prepublish": "pnpm run compile",
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
-		"lint": "eslint src --ext ts",
+		"lint": "tsc --noEmit -p ./",
 		"package": "vsce package --no-dependencies",
 		"cursor": "pnpm run package && cursor --install-extension aicommits-1.0.0.vsix"
 	},

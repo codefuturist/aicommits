@@ -1,389 +1,266 @@
 import * as vscode from 'vscode';
-import { spawn } from 'child_process';
-import { promisify } from 'util';
-import { exec } from 'child_process';
+import { getConfig, setApiKey, hasApiKey } from './config';
+import { getRepository, getStagedDiff, setCommitMessage, commit as gitCommit } from './git';
+import { generateCommitMessage } from './ai';
+import type { CommitType, Repository } from './types';
 
-const execAsync = promisify(exec);
-
+const TIMEOUT_MS = 30_000;
 let outputChannel: vscode.OutputChannel;
-const TIMEOUT_MS = 15000;
-let cliInstalled = false;
-const PACKAGE_NAME = 'aicommits';
+let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
 	outputChannel = vscode.window.createOutputChannel('AI Commits');
-	outputChannel.appendLine('[Extension] Activating AI Commits extension...');
 
-	const generateCommand = vscode.commands.registerCommand(
-		'aicommits.generate',
-		() => {
-			const config = vscode.workspace.getConfiguration('aicommits');
-			const defaultType = config.get<'plain' | 'conventional' | 'gitmoji'>('defaultType', 'plain');
-			return generateCommitMessage(defaultType);
-		},
-	);
+	// Status bar: shows current model
+	statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 50);
+	statusBarItem.command = 'aicommits.selectModel';
+	statusBarItem.tooltip = 'AI Commits — click to change model';
+	updateStatusBar(context);
 
-	const generateConventionalCommand = vscode.commands.registerCommand(
-		'aicommits.generateConventional',
-		() => generateCommitMessage('conventional'),
-	);
-
-	const generateGitmojiCommand = vscode.commands.registerCommand(
-		'aicommits.generateGitmoji',
-		() => generateCommitMessage('gitmoji'),
-	);
-
-	const setupCommand = vscode.commands.registerCommand('aicommits.setup', () =>
-		openSetupTerminal(),
-	);
-
-	const selectModelCommand = vscode.commands.registerCommand(
-		'aicommits.selectModel',
-		() => openTerminal('aicommits model'),
-	);
-
+	// Register all commands
 	context.subscriptions.push(
-		generateCommand,
-		generateConventionalCommand,
-		generateGitmojiCommand,
-		setupCommand,
-		selectModelCommand,
+		vscode.commands.registerCommand('aicommits.generate', () =>
+			handleGenerate(context),
+		),
+		vscode.commands.registerCommand('aicommits.generateConventional', () =>
+			handleGenerate(context, 'conventional'),
+		),
+		vscode.commands.registerCommand('aicommits.generateGitmoji', () =>
+			handleGenerate(context, 'gitmoji'),
+		),
+		vscode.commands.registerCommand('aicommits.generateAndCommit', () =>
+			handleGenerate(context, undefined, true),
+		),
+		vscode.commands.registerCommand('aicommits.regenerate', () =>
+			handleGenerate(context),
+		),
+		vscode.commands.registerCommand('aicommits.setup', () =>
+			handleSetup(context),
+		),
+		vscode.commands.registerCommand('aicommits.selectModel', () =>
+			handleSelectModel(context),
+		),
 		outputChannel,
+		statusBarItem,
 	);
 
-	checkCliOnActivation();
+	// Update status bar when config changes
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration('aicommits')) {
+				updateStatusBar(context);
+			}
+		}),
+	);
 }
 
-async function checkCliOnActivation() {
-	outputChannel.appendLine('[Activation] Checking CLI installation...');
-	cliInstalled = await isCliInstalled();
-	outputChannel.appendLine(`[Activation] CLI installed: ${cliInstalled}`);
+// ── Status Bar ──────────────────────────────────────────────
 
-	if (!cliInstalled) {
-		const action = await vscode.window.showInformationMessage(
-			'AI Commits requires aicommits CLI. Install it now?',
-			'Install',
-			'Later',
-		);
-
-		if (action === 'Install') {
-			await installCli();
-		}
-	} else {
-		checkForCliUpdate();
-	}
-}
-
-async function getCliVersion(): Promise<string | null> {
+async function updateStatusBar(context: vscode.ExtensionContext) {
 	try {
-		const { stdout } = await execAsync('aicommits --version');
-		const version = stdout.trim().replace(/^v/, '');
-		outputChannel.appendLine(`[CLI] Detected version: ${version}`);
-		return version;
-	} catch (error) {
-		outputChannel.appendLine(`[CLI] Failed to get version: ${error}`);
-		return null;
+		const config = await getConfig(context.secrets);
+		const modelName = config.model.split('/').pop() || config.model;
+		statusBarItem.text = `$(sparkle) ${modelName}`;
+		statusBarItem.show();
+	} catch {
+		statusBarItem.hide();
 	}
 }
 
-async function fetchLatestVersion(distTag: string): Promise<string | null> {
-	const url = `https://registry.npmjs.org/${PACKAGE_NAME}/${distTag}`;
-	outputChannel.appendLine(`[NPM] Fetching: ${url}`);
-	try {
-		const response = await fetch(url, { headers: { Accept: 'application/json' } });
-		outputChannel.appendLine(`[NPM] Response status: ${response.status}`);
-		if (!response.ok) return null;
-		const data = (await response.json()) as { version?: string };
-		outputChannel.appendLine(`[NPM] Got version: ${data.version}`);
-		return data.version || null;
-	} catch (error) {
-		outputChannel.appendLine(`[NPM] Fetch failed: ${error}`);
-		return null;
-	}
-}
+// ── Generate Command ────────────────────────────────────────
 
-function parseVersion(version: string) {
-	const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z]+)(?:\.(\d+))?)/);
-	if (!match) return { major: 0, minor: 0, patch: 0, prerelease: null as string | null, prereleaseNum: 0 };
-	return {
-		major: parseInt(match[1], 10),
-		minor: parseInt(match[2], 10),
-		patch: parseInt(match[3], 10),
-		prerelease: match[4] || null,
-		prereleaseNum: match[5] ? parseInt(match[5], 10) : 0,
-	};
-}
-
-function compareVersions(v1: string, v2: string): number {
-	const p1 = parseVersion(v1);
-	const p2 = parseVersion(v2);
-	if (p1.major !== p2.major) return p1.major > p2.major ? 1 : -1;
-	if (p1.minor !== p2.minor) return p1.minor > p2.minor ? 1 : -1;
-	if (p1.patch !== p2.patch) return p1.patch > p2.patch ? 1 : -1;
-	if (!p1.prerelease && p2.prerelease) return 1;
-	if (p1.prerelease && !p2.prerelease) return -1;
-	if (!p1.prerelease && !p2.prerelease) return 0;
-	if (p1.prereleaseNum !== p2.prereleaseNum) return p1.prereleaseNum > p2.prereleaseNum ? 1 : -1;
-	return 0;
-}
-
-async function checkForCliUpdate(): Promise<void> {
-	outputChannel.appendLine('[Update Check] Starting...');
-
-	const currentVersion = await getCliVersion();
-	outputChannel.appendLine(`[Update Check] Current version: ${currentVersion || 'not found'}`);
-	if (!currentVersion) return;
-
-	const distTag = currentVersion.includes('-') ? 'develop' : 'latest';
-	outputChannel.appendLine(`[Update Check] Using dist-tag: ${distTag}`);
-
-	const latestVersion = await fetchLatestVersion(distTag);
-	outputChannel.appendLine(`[Update Check] Latest version: ${latestVersion || 'not found'}`);
-	if (!latestVersion) return;
-
-	const comparison = compareVersions(currentVersion, latestVersion);
-	outputChannel.appendLine(`[Update Check] Version comparison result: ${comparison}`);
-
-	if (comparison >= 0) {
-		outputChannel.appendLine('[Update Check] No update needed');
-		return;
-	}
-
-	outputChannel.appendLine(`[Update Check] Update available! Showing notification...`);
-
-	const action = await vscode.window.showInformationMessage(
-		`A new version of aicommits CLI is available (v${latestVersion}). Update now?`,
-		'Update',
-		'Later',
-	);
-
-	outputChannel.appendLine(`[Update Check] User action: ${action || 'dismissed'}`);
-
-	if (action === 'Update') {
-		const terminal = vscode.window.createTerminal({ name: 'AI Commits Update' });
-		terminal.show();
-		terminal.sendText(`npm install -g ${PACKAGE_NAME}@${distTag}`);
-		vscode.window.showInformationMessage('Updating aicommits CLI...');
-	}
-}
-
-async function isCliInstalled(): Promise<boolean> {
-	return new Promise((resolve) => {
-		const proc = spawn('which', ['aicommits'], { shell: true });
-		let output = '';
-		proc.stdout.on('data', (data) => { output += data.toString(); });
-		proc.on('close', (code) => {
-			outputChannel.appendLine(`[CLI Check] which aicommits exit code: ${code}, output: ${output.trim()}`);
-			resolve(code === 0);
-		});
-		proc.on('error', (err) => {
-			outputChannel.appendLine(`[CLI Check] Error: ${err}`);
-			resolve(false);
-		});
-	});
-}
-
-async function installCli(): Promise<boolean> {
-	return new Promise((resolve) => {
-		const terminal = vscode.window.createTerminal({ name: 'AI Commits Setup' });
-		terminal.show();
-		terminal.sendText('npm install -g aicommits@develop && aicommits setup');
-
-		vscode.window.showInformationMessage(
-			'Installing aicommits... Complete the setup in the terminal, then try again.',
-			'OK',
-		);
-
-		resolve(false);
-	});
-}
-
-async function ensureCliInstalled(): Promise<boolean> {
-	if (cliInstalled) {
-		return true;
-	}
-
-	cliInstalled = await isCliInstalled();
-	if (cliInstalled) {
-		return true;
-	}
-
-	const action = await vscode.window.showErrorMessage(
-		'aicommits CLI is not installed. Install it now?',
-		'Install',
-		'Cancel',
-	);
-
-	if (action === 'Install') {
-		await installCli();
-	}
-	return false;
-}
-
-async function generateCommitMessage(
-	type: 'plain' | 'conventional' | 'gitmoji',
+async function handleGenerate(
+	context: vscode.ExtensionContext,
+	typeOverride?: CommitType,
+	autoCommit = false,
 ) {
-	if (!(await ensureCliInstalled())) {
-		return;
-	}
-
-	const config = vscode.workspace.getConfiguration('aicommits');
-	const cliPath = config.get<string>('path', 'aicommits');
-	const autoCommit = config.get<boolean>('autoCommit', false);
-
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders || workspaceFolders.length === 0) {
-		vscode.window.showErrorMessage('No workspace folder open');
-		return;
-	}
-
-	const cwd = workspaceFolders[0].uri.fsPath;
-
-	const gitExtension = vscode.extensions.getExtension('vscode.git')?.exports;
-	const git = gitExtension?.getAPI(1);
-	const repo = git?.repositories[0];
-
+	// Validate prerequisites
+	const repo = getRepository();
 	if (!repo) {
 		vscode.window.showErrorMessage('No Git repository found');
 		return;
 	}
 
+	const config = await getConfig(context.secrets);
+	if (!config.apiKey) {
+		const action = await vscode.window.showWarningMessage(
+			'No API key configured. Set one up now?',
+			'Setup',
+			'Cancel',
+		);
+		if (action === 'Setup') { await handleSetup(context); }
+		return;
+	}
+
+	// Apply type override
+	if (typeOverride) { config.type = typeOverride; }
+
+	// Auto-commit also reads VS Code setting
+	const vsConfig = vscode.workspace.getConfiguration('aicommits');
+	const shouldAutoCommit = autoCommit || vsConfig.get<boolean>('autoCommit', false);
+
+	// Save original input box value for rollback
 	const originalMessage = repo.inputBox.value;
-	repo.inputBox.value = '⏳ Generating commit message...';
 
 	await vscode.window.withProgress(
 		{
-			location: vscode.ProgressLocation.SourceControl,
-			title: 'Generating commit message...',
-			cancellable: false,
+			location: vscode.ProgressLocation.Notification,
+			title: 'AI Commits',
+			cancellable: true,
 		},
-		async () => {
+		async (progress, token) => {
 			try {
-				const args = ['--clipboard', '--yes'];
-				if (type !== 'plain') {
-					args.push('--type', type);
-				}
+				// Get staged diff
+				progress.report({ message: 'Getting staged diff...' });
+				const diff = await getStagedDiff(repo);
 
-				await runCli(cliPath, args, cwd, TIMEOUT_MS);
-
-				const message = await vscode.env.clipboard.readText();
-
-				if (!message) {
-					repo.inputBox.value = originalMessage;
-					vscode.window.showWarningMessage('No message generated');
+				if (!diff || diff.trim().length === 0) {
+					vscode.window.showWarningMessage(
+						'No staged changes found. Stage some files first.',
+					);
 					return;
 				}
 
-				if (autoCommit) {
-					await commitWithMessage(repo, message);
+				// Generate
+				progress.report({ message: `Generating with ${config.model.split('/').pop()}...` });
+				const abortController = new AbortController();
+				const timeout = setTimeout(() => abortController.abort(), TIMEOUT_MS);
+
+				// Abort on user cancel
+				token.onCancellationRequested(() => abortController.abort());
+
+				const result = await generateCommitMessage(config, diff, abortController.signal);
+				clearTimeout(timeout);
+
+				if (!result.messages || result.messages.length === 0) {
+					vscode.window.showWarningMessage('No commit message generated. Try again.');
+					return;
+				}
+
+				// Log usage
+				if (result.usage) {
+					outputChannel.appendLine(
+						`[Generate] Tokens: ${result.usage.prompt_tokens} prompt + ${result.usage.completion_tokens} completion = ${result.usage.total_tokens} total`,
+					);
+				}
+
+				// Single suggestion → set directly
+				let selectedMessage: string;
+				if (result.messages.length === 1) {
+					selectedMessage = result.messages[0];
 				} else {
-					repo.inputBox.value = message;
+					// Multiple suggestions → QuickPick
+					const picked = await vscode.window.showQuickPick(
+						result.messages.map((m, i) => ({
+							label: m,
+							description: `Option ${i + 1}`,
+						})),
+						{
+							placeHolder: 'Select a commit message',
+							title: 'AI Commits — Choose a message',
+						},
+					);
+					if (!picked) { return; }
+					selectedMessage = picked.label;
+				}
+
+				if (shouldAutoCommit) {
+					await commitWithMessage(repo, selectedMessage);
+				} else {
+					setCommitMessage(repo, selectedMessage);
 					vscode.window.showInformationMessage('✨ Commit message generated!');
 				}
 			} catch (error) {
 				repo.inputBox.value = originalMessage;
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
+				const msg = error instanceof Error ? error.message : String(error);
 
-				if (errorMessage.includes('Timeout')) {
-					vscode.window
-						.showWarningMessage(
-							'⏱️ AI is taking too long. Try again or check your API key.',
-							'Setup',
-							'Cancel',
-						)
-						.then((action) => {
-							if (action === 'Setup') {
-								openSetupTerminal();
-							}
-						});
-				} else {
-					outputChannel.appendLine(`Error: ${errorMessage}`);
-					vscode.window.showErrorMessage(`AI Commits error: ${errorMessage}`);
+				if (msg.includes('abort')) {
+					outputChannel.appendLine('[Generate] Cancelled by user');
+					return;
 				}
+
+				outputChannel.appendLine(`[Generate] Error: ${msg}`);
+				vscode.window.showErrorMessage(`AI Commits: ${msg}`);
 			}
 		},
 	);
 }
 
-function openSetupTerminal() {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	const cwd = workspaceFolders?.[0]?.uri.fsPath;
+// ── Commit Helper ───────────────────────────────────────────
 
-	const terminal = vscode.window.createTerminal({
-		name: 'AI Commits Setup',
-		cwd,
-	});
-
-	terminal.show();
-	terminal.sendText('aicommits setup');
-}
-
-function openTerminal(command: string) {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	const cwd = workspaceFolders?.[0]?.uri.fsPath;
-
-	const terminal = vscode.window.createTerminal({
-		name: 'AI Commits',
-		cwd,
-	});
-
-	terminal.show();
-	terminal.sendText(command);
-}
-
-function runCli(
-	cliPath: string,
-	args: string[],
-	cwd: string,
-	timeout: number,
-): Promise<void> {
-	return new Promise((resolve, reject) => {
-		outputChannel.appendLine(`Running: ${cliPath} ${args.join(' ')}`);
-
-		const proc = spawn(cliPath, args, {
-			cwd,
-			shell: true,
-		});
-
-		let stderr = '';
-
-		proc.stderr.on('data', (data) => {
-			stderr += data.toString();
-			outputChannel.append(data.toString());
-		});
-
-		const timer = setTimeout(() => {
-			proc.kill();
-			reject(new Error('Timeout'));
-		}, timeout);
-
-		proc.on('close', (code) => {
-			clearTimeout(timer);
-
-			if (code !== 0) {
-				reject(new Error(stderr || `Process exited with code ${code}`));
-				return;
-			}
-
-			resolve();
-		});
-
-		proc.on('error', (err) => {
-			clearTimeout(timer);
-			reject(err);
-		});
-	});
-}
-
-async function commitWithMessage(repo: any, message: string) {
+async function commitWithMessage(repo: Repository, message: string) {
 	try {
-		await repo.commit(message);
+		await gitCommit(repo, message);
 		vscode.window.showInformationMessage('✅ Committed successfully!');
 	} catch (error) {
-		vscode.window.showErrorMessage(
-			`Failed to commit: ${error instanceof Error ? error.message : String(error)}`,
+		const msg = error instanceof Error ? error.message : String(error);
+		vscode.window.showErrorMessage(`Failed to commit: ${msg}`);
+	}
+}
+
+// ── Setup Command ───────────────────────────────────────────
+
+async function handleSetup(context: vscode.ExtensionContext) {
+	const apiKey = await vscode.window.showInputBox({
+		title: 'AI Commits Setup',
+		prompt: 'Enter your API key (OpenAI, GitHub Copilot token, or compatible)',
+		password: true,
+		placeHolder: 'sk-... or gho_...',
+		ignoreFocusOut: true,
+	});
+
+	if (!apiKey) { return; }
+
+	await setApiKey(context.secrets, apiKey);
+
+	const baseUrl = await vscode.window.showInputBox({
+		title: 'API Base URL',
+		prompt: 'Base URL for the API (leave default for OpenAI)',
+		value: 'https://api.openai.com/v1',
+		placeHolder: 'https://api.openai.com/v1',
+		ignoreFocusOut: true,
+	});
+
+	if (baseUrl) {
+		await vscode.workspace.getConfiguration('aicommits').update(
+			'baseUrl', baseUrl, vscode.ConfigurationTarget.Global,
 		);
+	}
+
+	const model = await vscode.window.showInputBox({
+		title: 'Model Name',
+		prompt: 'Which model to use for generation',
+		value: 'gpt-4o-mini',
+		placeHolder: 'gpt-4o-mini',
+		ignoreFocusOut: true,
+	});
+
+	if (model) {
+		await vscode.workspace.getConfiguration('aicommits').update(
+			'model', model, vscode.ConfigurationTarget.Global,
+		);
+	}
+
+	updateStatusBar(context);
+	vscode.window.showInformationMessage('✅ AI Commits configured! Stage some changes and click ✨ to generate.');
+}
+
+// ── Select Model ────────────────────────────────────────────
+
+async function handleSelectModel(context: vscode.ExtensionContext) {
+	const model = await vscode.window.showInputBox({
+		title: 'AI Commits — Select Model',
+		prompt: 'Enter model name (e.g., gpt-4o, openai/gpt-4.1, claude-sonnet-4-20250514)',
+		value: (await getConfig(context.secrets)).model,
+		ignoreFocusOut: true,
+	});
+
+	if (model) {
+		await vscode.workspace.getConfiguration('aicommits').update(
+			'model', model, vscode.ConfigurationTarget.Global,
+		);
+		updateStatusBar(context);
+		vscode.window.showInformationMessage(`Model set to: ${model}`);
 	}
 }
 

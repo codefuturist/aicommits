@@ -1,60 +1,76 @@
-# AI Commits VSCode Extension
+# AI Commits — VS Code Extension
 
-Generate git commit messages using AI directly from VSCode's Git interface.
+Generate git commit messages using AI directly from VS Code's Source Control panel. Works standalone — no CLI required.
 
 ## Features
 
-- Generate commit messages with a single click from the Source Control panel
-- Support for plain, conventional, and gitmoji commit formats
-- Integrates seamlessly with VSCode's built-in Git extension
-- Preview messages before committing or auto-commit option
+- **✨ One-Click Generate** — Button in the SCM title bar generates a commit message instantly
+- **Keyboard Shortcuts** — `Cmd+K Cmd+G` to generate, `Cmd+K Cmd+C` to generate & commit
+- **Multiple Formats** — Plain, Conventional Commits, or Gitmoji
+- **Multi-Suggestion** — Generate up to 5 options and pick the best one
+- **Shared Config** — Automatically reads your `~/.config/aicommits/config` (CLI config)
+- **Secure** — API keys stored in your OS keychain via VS Code's SecretStorage
+- **Any Provider** — OpenAI, GitHub Copilot, Anthropic, Ollama, or any OpenAI-compatible API
 
-## Requirements
+## Quick Start
 
-- [aicommits CLI](https://github.com/anthropics/aicommits) must be installed and configured
-- Run `aicommits setup` first to configure your AI provider
+1. Install the extension
+2. Run `AI Commits: Setup` from the Command Palette (`Cmd+Shift+P`)
+3. Enter your API key, base URL, and model
+4. Stage some files and click the **✨** button in the Source Control panel
 
-## Usage
+### GitHub Copilot Users
 
-1. Open the Source Control panel (Ctrl/Cmd + Shift + G)
-2. Stage your changes
-3. Click the sparkle icon in the toolbar or use the command palette:
-   - `AI Commits: Generate Commit Message` - Plain format
-   - `AI Commits: Generate Conventional Commit` - Conventional commits format
-   - `AI Commits: Generate Gitmoji Commit` - Gitmoji format
-4. The generated message appears in the commit input box
-5. Review and commit!
-
-## Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `aicommits.path` | `aicommits` | Path to the aicommits CLI binary |
-| `aicommits.defaultType` | `plain` | Default commit message format (plain, conventional, gitmoji) |
-| `aicommits.autoCommit` | `false` | Auto-commit after generating (skips preview) |
+Set the base URL to `https://models.github.ai/inference` and use your Copilot token (`gho_...`) as the API key.
 
 ## Commands
 
-- `aicommits.generate` - Generate plain commit message
-- `aicommits.generateConventional` - Generate conventional commit
-- `aicommits.generateGitmoji` - Generate gitmoji commit
-- `aicommits.setup` - Setup AI provider (opens terminal)
-- `aicommits.selectModel` - Select AI model (opens terminal)
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| **Generate Commit Message** | `Cmd+K Cmd+G` | Generate and populate the SCM input box |
+| **Generate & Commit** | `Cmd+K Cmd+C` | Generate and auto-commit |
+| **Generate Conventional Commit** | — | Force conventional format |
+| **Generate Gitmoji Commit** | — | Force gitmoji format |
+| **Regenerate Message** | — | Generate a new message |
+| **Setup Provider** | — | Configure API key, URL, model |
+| **Select Model** | — | Quick model switch |
 
-## Installation
+## Settings
 
-### From Source
+All settings are optional — the extension reads from `~/.config/aicommits/config` by default.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `aicommits.apiKey` | — | API key (prefer Setup command for secure storage) |
+| `aicommits.baseUrl` | — | API base URL |
+| `aicommits.model` | — | Model name |
+| `aicommits.commitType` | — | plain / conventional / gitmoji |
+| `aicommits.locale` | — | Message language (en, de, fr...) |
+| `aicommits.maxLength` | 72 | Max commit message length |
+| `aicommits.generateCount` | 1 | Number of suggestions (1-5) |
+| `aicommits.customPrompt` | — | Extra instructions for the AI |
+| `aicommits.autoCommit` | false | Auto-commit after generation |
+
+## Config Precedence
+
+1. **VS Code Settings** (highest priority)
+2. **`$AICOMMITS_CONFIG`** environment variable
+3. **`~/.config/aicommits/config`** (shared with CLI)
+4. **`~/.aicommits`** (legacy fallback)
+
+## Development
 
 ```bash
-cd vscode-extension
 pnpm install
-pnpm run compile
+pnpm run watch    # TypeScript watch mode
+# Press F5 in VS Code to launch Extension Development Host
 ```
 
-Then in VSCode:
-1. Open the Extensions panel
-2. Click "..." menu → "Install from VSIX..."
-3. Select the `.vsix` file (run `pnpm run package` first)
+### Packaging
+
+```bash
+pnpm run package  # Creates .vsix file
+```
 
 ## License
 
