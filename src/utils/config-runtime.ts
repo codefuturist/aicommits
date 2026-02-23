@@ -27,7 +27,8 @@ const detectProvider = (
 			(p) =>
 				p.baseUrl === baseUrl ||
 				(p.name === 'ollama' && baseUrl.startsWith(p.baseUrl.slice(0, -3))) ||
-				(p.name === 'copilot' && baseUrl.includes('models.github.ai'))
+				(p.name === 'copilot' && baseUrl.includes('models.github.ai')) ||
+				(p.name === 'mistral' && baseUrl.includes('api.mistral.ai'))
 		);
 		if (matchingProvider) {
 			return matchingProvider.name;
