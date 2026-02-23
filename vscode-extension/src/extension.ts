@@ -3,6 +3,7 @@ import { getConfig, setApiKey } from './config';
 import { getRepository, getStagedDiff, setCommitMessage, commit as gitCommit } from './git';
 import { generateCommitMessage } from './ai';
 import { AicommitsSidebarProvider } from './sidebar';
+import { AicommitsTaskProvider } from './tasks';
 import type { CommitType, Repository } from './types';
 
 const TIMEOUT_MS = 30_000;
@@ -28,6 +29,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Watch git state changes to update staged files in sidebar
 	watchGitState(context);
+
+	// Task provider
+	context.subscriptions.push(
+		vscode.tasks.registerTaskProvider('aicommits', new AicommitsTaskProvider(context.secrets)),
+	);
 
 	// Register all commands
 	context.subscriptions.push(

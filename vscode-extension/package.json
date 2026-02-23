@@ -34,6 +34,34 @@
 		"onStartupFinished"
 	],
 	"contributes": {
+		"taskDefinitions": [
+			{
+				"type": "aicommits",
+				"properties": {
+					"action": {
+						"type": "string",
+						"description": "The AI Commits action to run",
+						"enum": [
+							"generate",
+							"generate-conventional",
+							"generate-gitmoji",
+							"generate-and-commit",
+							"setup"
+						],
+						"enumDescriptions": [
+							"Generate a commit message and set it in the SCM input box",
+							"Generate a conventional commit message (feat:, fix:, etc.)",
+							"Generate a gitmoji commit message (🐛, ✨, etc.)",
+							"Generate a commit message and commit immediately",
+							"Run the interactive API key setup"
+						]
+					}
+				},
+				"required": [
+					"action"
+				]
+			}
+		],
 		"viewsContainers": {
 			"activitybar": [
 				{
