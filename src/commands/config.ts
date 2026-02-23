@@ -1,4 +1,5 @@
 import { command } from 'cleye';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import { hasOwn } from '../utils/config-types.js';
 import { getConfig, setConfigs } from '../utils/config-runtime.js';
@@ -25,6 +26,7 @@ export default command(
 Modes:
   (none)   Show active config summary
   edit     Interactive config editor (TUI wizard)
+  open     Open config file in $VISUAL / $EDITOR / system default
   get      Get a config value:   aicommits config get OPENAI_API_KEY
   set      Set a config value:   aicommits config set OPENAI_MODEL=gpt-4o
   info     Show all config sources and precedence
@@ -200,6 +202,40 @@ Common config keys:
 
 			if (mode === 'path') {
 				console.log(resolveConfigPath());
+				return;
+			}
+
+			if (mode === 'open') {
+				const configPath = resolveConfigPath();
+
+				// Ensure the config file exists before opening
+				if (!fs.existsSync(configPath)) {
+					const dir = getConfigDir();
+					fs.mkdirSync(dir, { recursive: true });
+					fs.writeFileSync(configPath, '', 'utf8');
+				}
+
+				// Resolve editor: $VISUAL → $EDITOR → OS default
+				const editor = process.env.VISUAL
+					|| process.env.EDITOR
+					|| (process.platform === 'darwin' ? 'open -t'
+						: process.platform === 'win32' ? 'notepad'
+						: 'xdg-open');
+
+				console.log(dim(`Opening ${configPath} with ${editor}...`));
+
+				try {
+					execSync(`${editor} "${configPath}"`, {
+						stdio: 'inherit',
+						// Terminal editors (vim, nano) need the TTY
+						...(process.stdin.isTTY ? {} : { stdio: 'pipe' }),
+					});
+				} catch {
+					throw new KnownError(
+						`Failed to open editor "${editor}". Set $VISUAL or $EDITOR to your preferred editor.\n`
+						+ `  Example: export EDITOR=nano`,
+					);
+				}
 				return;
 			}
 
