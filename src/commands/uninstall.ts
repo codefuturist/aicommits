@@ -7,6 +7,10 @@ import { findInstalledBinaries } from '../utils/install-paths.js';
 export default command(
 	{
 		name: 'uninstall',
+		description: 'Remove installed aicommits binaries',
+		help: {
+			description: 'Remove installed aicommits binaries',
+		},
 		parameters: [],
 		flags: {
 			yes: {

@@ -110,6 +110,25 @@ const configParsers = {
 		if (!value || value.trim() === '') return undefined;
 		return value.trim();
 	},
+	'post-commit-rebuild'(value?: string) {
+		if (!value || value.trim() === '') return 'off' as const;
+		const v = value.trim().toLowerCase();
+		parseAssert('post-commit-rebuild', ['smart', 'always', 'off'].includes(v), 'Must be smart, always, or off');
+		return v as 'smart' | 'always' | 'off';
+	},
+	'post-commit-install'(value?: string) {
+		if (!value || value.trim() === '') return false;
+		const v = value.trim().toLowerCase();
+		return v === 'true' || v === '1' || v === 'yes';
+	},
+	'post-commit-branches'(value?: string) {
+		if (!value || value.trim() === '') return undefined;
+		return value.trim();
+	},
+	'post-commit-tag-pattern'(value?: string) {
+		if (!value || value.trim() === '') return undefined;
+		return value.trim();
+	},
 } as const;
 
 type ConfigKeys = keyof typeof configParsers;

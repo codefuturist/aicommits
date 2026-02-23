@@ -12,6 +12,10 @@ import {
 export default command(
 	{
 		name: 'rebuild',
+		description: 'Rebuild the project from source (detects project type automatically)',
+		help: {
+			description: 'Rebuild the project from source (detects project type automatically)',
+		},
 		parameters: [],
 		flags: {
 			info: {

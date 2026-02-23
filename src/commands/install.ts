@@ -51,6 +51,10 @@ function detectExistingInstall(binDir: string): Map<string, string | null> {
 export default command(
 	{
 		name: 'install',
+		description: 'Install aicommits binary to system PATH (~/.local/bin or /usr/local/bin)',
+		help: {
+			description: 'Install aicommits binary to system PATH (~/.local/bin or /usr/local/bin)',
+		},
 		parameters: [],
 		flags: {
 			scope: {

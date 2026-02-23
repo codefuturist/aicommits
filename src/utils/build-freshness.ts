@@ -210,3 +210,50 @@ export function getCurrentCommitShort(): string | null {
 export function getProjectRootPath(): string {
 	return getProjectRoot();
 }
+
+export function didCommitChangeSource(sourceDir?: string): boolean {
+	const projectRoot = getProjectRoot();
+	const projectType = detectProjectType(projectRoot);
+	const dir = sourceDir || projectType?.sourceDir || 'src';
+
+	try {
+		const diff = execSync(`git diff --name-only HEAD~1..HEAD -- ${dir}`, {
+			encoding: 'utf8',
+			cwd: projectRoot,
+			stdio: ['pipe', 'pipe', 'pipe'],
+		}).trim();
+		return diff.length > 0;
+	} catch {
+		// First commit or other error — assume changed
+		return true;
+	}
+}
+
+export function getCurrentBranch(): string | null {
+	const projectRoot = getProjectRoot();
+	return git('rev-parse --abbrev-ref HEAD', projectRoot);
+}
+
+export function getHeadTags(): string[] {
+	const projectRoot = getProjectRoot();
+	try {
+		const result = execSync('git tag --points-at HEAD', {
+			encoding: 'utf8',
+			cwd: projectRoot,
+			stdio: ['pipe', 'pipe', 'pipe'],
+		}).trim();
+		return result ? result.split('\n').map((t) => t.trim()).filter(Boolean) : [];
+	} catch {
+		return [];
+	}
+}
+
+export function matchesGlobPattern(value: string, pattern: string): boolean {
+	// Convert glob pattern to regex: * → [^/]*, ** → .*, ? → .
+	const regexStr = pattern
+		.replace(/\*\*/g, '{{GLOBSTAR}}')
+		.replace(/\*/g, '[^/]*')
+		.replace(/\?/g, '.')
+		.replace(/\{\{GLOBSTAR\}\}/g, '.*');
+	return new RegExp(`^${regexStr}$`).test(value);
+}
