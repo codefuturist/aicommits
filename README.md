@@ -95,12 +95,12 @@ aicommits --all # or -a
 
 #### CLI Options
 
+- `--all` or `-a`: Automatically stage changes in tracked files for the commit (default: **false**)
+- `--clipboard` or `-c`: Copy the selected message to the clipboard instead of committing (default: **false**)
 - `--generate` or `-g`: Number of messages to generate (default: **1**)
 - `--exclude` or `-x`: Files to exclude from AI analysis
-- `--all` or `-a`: Automatically stage changes in tracked files for the commit (default: **false**)
 - `--type` or `-t`: Git commit message format (default: **plain**). Supports `plain`, `conventional`, and `gitmoji`
-- `--confirm` or `-y`: Skip confirmation when committing after message generation (default: **false**)
-- `--clipboard` or `-c`: Copy the selected message to the clipboard instead of committing (default: **false**)
+- `--yes` or `-y`: Skip confirmation when committing after message generation (default: **false**)
 
 #### Generate multiple recommendations
 

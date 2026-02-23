@@ -33,6 +33,7 @@ export default async (
 	skipConfirm: boolean,
 	copyToClipboard: boolean,
 	noVerify: boolean,
+	customPrompt: string | undefined,
 	rawArgv: string[]
 ) =>
 	(async () => {
@@ -160,7 +161,8 @@ export default async (
 							config.generate,
 							config['max-length'],
 							config.type,
-							timeout
+							timeout,
+							customPrompt
 						);
 						chunkMessages.push(...result.messages);
 						if (result.usage) {
@@ -182,7 +184,8 @@ export default async (
 					config.locale,
 					config['max-length'],
 					config.type,
-					timeout
+					timeout,
+					customPrompt
 				);
 				messages = combineResult.messages;
 				if (combineResult.usage) {
@@ -212,7 +215,8 @@ export default async (
 					config.generate,
 					config['max-length'],
 					config.type,
-					timeout
+					timeout,
+					customPrompt
 				);
 				messages = result.messages;
 				usage = result.usage;

@@ -33,7 +33,7 @@ export const getCommitMessage = async (
 		}
 
 		if (!isInteractive) {
-			throw new KnownError('Interactive terminal required for commit message confirmation. Use --confirm flag to skip confirmation.');
+			throw new KnownError('Interactive terminal required for commit message confirmation. Use --yes flag to skip confirmation.');
 		}
 
 		console.log(`\n\x1b[1m${message}\x1b[0m\n`);
@@ -50,7 +50,7 @@ export const getCommitMessage = async (
 	}
 
 	if (!isInteractive) {
-		throw new KnownError('Interactive terminal required for commit message selection. Use --confirm flag to skip selection and use the first message.');
+		throw new KnownError('Interactive terminal required for commit message selection. Use --yes flag to skip selection and use the first message.');
 	}
 
 	const selected = await select({

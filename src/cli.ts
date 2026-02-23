@@ -61,7 +61,7 @@ cli(
 					'Git commit message format (default: plain). Supports plain, conventional, and gitmoji',
 				alias: 't',
 			},
-			confirm: {
+			yes: {
 				type: Boolean,
 				description:
 					'Skip confirmation when committing after message generation (default: false)',
@@ -75,13 +75,19 @@ cli(
 				alias: 'c',
 				default: false,
 			},
-		noVerify: {
-			type: Boolean,
-			description:
-				'Bypass pre-commit hooks while committing (default: false)',
-			alias: 'n',
-			default: false,
-		},
+			noVerify: {
+				type: Boolean,
+				description:
+					'Bypass pre-commit hooks while committing (default: false)',
+				alias: 'n',
+				default: false,
+			},
+			prompt: {
+				type: String,
+				description:
+					'Custom prompt to guide the LLM behavior (e.g., specific language, style instructions)',
+				alias: 'p',
+			},
 		version: {
 			type: Boolean,
 			description: 'Show version number',
@@ -111,9 +117,10 @@ cli(
 				argv.flags.exclude,
 				argv.flags.all,
 				argv.flags.type,
-				argv.flags.confirm,
+				argv.flags.yes,
 				argv.flags.clipboard,
 				argv.flags.noVerify,
+				argv.flags.prompt,
 				rawArgv
 			);
 		}

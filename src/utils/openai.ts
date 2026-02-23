@@ -77,7 +77,8 @@ export const generateCommitMessage = async (
 	completions: number,
 	maxLength: number,
 	type: CommitType,
-	timeout: number
+	timeout: number,
+	customPrompt?: string
 ) => {
 	if (process.env.DEBUG) {
 		console.log('Diff being sent to AI:');
@@ -100,7 +101,7 @@ export const generateCommitMessage = async (
 		const promises = Array.from({ length: completions }, () =>
 			generateText({
 				model: provider(model),
-				system: generatePrompt(locale, maxLength, type),
+				system: generatePrompt(locale, maxLength, type, customPrompt),
 				prompt: diff,
 				temperature: 0.4,
 				maxRetries: 2,
@@ -198,7 +199,8 @@ export const combineCommitMessages = async (
 	locale: string,
 	maxLength: number,
 	type: CommitType,
-	timeout: number
+	timeout: number,
+	customPrompt?: string
 ) => {
 	try {
 		const provider =

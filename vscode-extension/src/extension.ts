@@ -259,7 +259,7 @@ async function generateCommitMessage(
 		},
 		async () => {
 			try {
-				const args = ['--clipboard', '--confirm'];
+				const args = ['--clipboard', '--yes'];
 				if (type !== 'plain') {
 					args.push('--type', type);
 				}
