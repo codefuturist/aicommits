@@ -29,11 +29,12 @@ const BOUNDARY_THRESHOLD = 50;
 
 export default command(
 	{
-		name: 'stage',
-		description: 'AI-powered smart staging — group changes into logical commits',
+		name: 'split',
+		alias: 'stage',
+		description: 'AI-powered commit splitting — group changes into logical atomic commits',
 		help: {
 			description:
-				'Analyze unstaged changes, group them into logical atomic commits using AI, then stage and commit each group.',
+				'Analyze changes, group them into logical atomic commits using AI, then commit each group.',
 		},
 		flags: {
 			all: {
@@ -89,7 +90,7 @@ export default command(
 	},
 	(argv) => {
 		(async () => {
-			intro(bgCyan(black(' aicommits · smart stage ')));
+			intro(bgCyan(black(' aicommits · split ')));
 
 			const repoRoot = await assertGitRepo();
 			const isStaged = argv.flags.staged;
@@ -211,7 +212,7 @@ export default command(
 				console.log('');
 				console.log(formatBoundaryDetails(boundaries));
 
-				outro(dim(`Use ${green('aicommits stage')} to group and commit, or ${green('--scope <dir>')} to focus on one boundary.`));
+				outro(dim(`Use ${green('aicommits split')} to group and commit, or ${green('--scope <dir>')} to focus on one boundary.`));
 				return;
 			}
 
