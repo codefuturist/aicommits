@@ -39,7 +39,7 @@
 				{
 					"id": "aicommits",
 					"title": "AI Commits",
-					"icon": "$(sparkle)"
+					"icon": "media/sidebar-icon.svg"
 				}
 			]
 		},
@@ -48,7 +48,7 @@
 				{
 					"id": "aicommits.sidebar",
 					"name": "AI Commits",
-					"icon": "$(sparkle)",
+					"icon": "media/sidebar-icon.svg",
 					"contextualTitle": "AI Commits"
 				}
 			]
