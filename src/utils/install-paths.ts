@@ -1,4 +1,4 @@
-import { existsSync, accessSync, constants } from 'fs';
+import { existsSync, accessSync, constants, readFileSync, realpathSync } from 'fs';
 import { join, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { platform } from 'os';
@@ -133,4 +133,87 @@ export function findInstalledBinaries(): Array<{ name: string; path: string; sco
 	}
 
 	return found;
+}
+
+export interface BinaryLocation {
+	name: string;
+	path: string;
+	realPath: string;        // resolved symlink/actual file
+	isSymlink: boolean;
+	isActive: boolean;       // first in PATH (the one that runs)
+	source: string;          // e.g., "pnpm", "aicommits install", "npm", "unknown"
+}
+
+function classifyBinarySource(filePath: string): string {
+	try {
+		const content = readFileSync(filePath, 'utf8');
+		if (content.includes('pnpm')) return 'pnpm global';
+		if (content.includes('npm')) return 'npm global';
+		if (content.includes('dist/cli.mjs')) return 'aicommits install';
+		if (content.includes('yarn')) return 'yarn global';
+		if (content.includes('bun')) return 'bun global';
+	} catch { /* binary file or unreadable */ }
+
+	// Check if it's a symlink into a package manager store
+	try {
+		const real = realpathSync(filePath);
+		if (real.includes('.pnpm') || real.includes('pnpm')) return 'pnpm global';
+		if (real.includes('.npm') || real.includes('npm')) return 'npm global';
+		if (real.includes('.yarn') || real.includes('yarn')) return 'yarn global';
+		if (real.includes('.bun') || real.includes('bun')) return 'bun global';
+		if (real.includes('homebrew') || real.includes('Cellar')) return 'homebrew';
+	} catch { /* broken symlink */ }
+
+	return 'unknown';
+}
+
+export function findAllBinariesInPath(): Map<string, BinaryLocation[]> {
+	const results = new Map<string, BinaryLocation[]>();
+	const pathDirs = (process.env.PATH || '').split(':').filter(Boolean);
+
+	for (const name of BINARY_NAMES) {
+		const locations: BinaryLocation[] = [];
+		const seen = new Set<string>();
+
+		for (const dir of pathDirs) {
+			const binPath = join(dir, name);
+			if (!existsSync(binPath)) continue;
+
+			// Deduplicate by resolved path
+			let realPath: string;
+			let isSymlink = false;
+			try {
+				realPath = realpathSync(binPath);
+				isSymlink = realPath !== resolve(binPath);
+			} catch {
+				realPath = resolve(binPath);
+			}
+
+			if (seen.has(realPath)) continue;
+			seen.add(realPath);
+
+			locations.push({
+				name,
+				path: binPath,
+				realPath,
+				isSymlink,
+				isActive: locations.length === 0, // first one wins
+				source: classifyBinarySource(binPath),
+			});
+		}
+
+		if (locations.length > 0) {
+			results.set(name, locations);
+		}
+	}
+
+	return results;
+}
+
+export function hasPathConflicts(): boolean {
+	const all = findAllBinariesInPath();
+	for (const [, locations] of all) {
+		if (locations.length > 1) return true;
+	}
+	return false;
 }

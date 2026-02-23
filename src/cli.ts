@@ -15,6 +15,7 @@ import stageCommand from './commands/stage.js';
 import rebuildCommand from './commands/rebuild.js';
 import installCommand from './commands/install.js';
 import uninstallCommand from './commands/uninstall.js';
+import doctorCommand from './commands/doctor.js';
 import { checkAndAutoUpdate } from './utils/auto-update.js';
 import { checkAndRebuildIfStale } from './utils/dev-rebuild.js';
 
@@ -120,7 +121,7 @@ cli(
 		},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand, doctorCommand],
 
 		help: {
 			description,

@@ -30,6 +30,7 @@ import {
 	getPathHint,
 	getBinaryNames,
 	findInstalledBinaries,
+	hasPathConflicts,
 } from '../utils/install-paths.js';
 
 function detectExistingInstall(binDir: string): Map<string, string | null> {
@@ -210,6 +211,13 @@ export default command(
 			lines.push(dim(`  Points to: ${entrypoint}`));
 
 			note(lines.join('\n'), 'Installed');
+
+			// Warn about PATH conflicts after install
+			if (hasPathConflicts()) {
+				console.log(`  ${yellow('⚠')} Multiple aicommits binaries detected in PATH.`);
+				console.log(dim(`    Run ${cyan('aicommits doctor --fix')} to resolve conflicts.\n`));
+			}
+
 			outro(`Run ${cyan('aicommits --version')} to verify.`);
 		})();
 	},
