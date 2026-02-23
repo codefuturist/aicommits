@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getConfig, setApiKey, hasApiKey } from './config';
+import { getConfig, setApiKey } from './config';
 import { getRepository, getStagedDiff, setCommitMessage, commit as gitCommit } from './git';
 import { generateCommitMessage } from './ai';
 import type { CommitType, Repository } from './types';

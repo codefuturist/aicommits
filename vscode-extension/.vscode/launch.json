@@ -2,13 +2,24 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Extension",
-			"type": "extension",
+			"name": "Run Extension (VS Code)",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"name": "Run Extension (Cursor)",
+			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "/Applications/Cursor.app/Contents/MacOS/Cursor",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
-			]
+			],
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"]
 		}
 	]
 }
