@@ -23,7 +23,9 @@
 		"aic": "dist/cli.mjs"
 	},
 	"scripts": {
+		"prebuild": "node scripts/prebuild.mjs",
 		"build": "pkgroll --minify --export-condition=node",
+		"postbuild": "node scripts/postbuild.mjs",
 		"prepare": "pnpm build",
 		"lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1 | grep -v vscode-extension || true",
 		"type-check": "tsc",

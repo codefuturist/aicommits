@@ -96,6 +96,20 @@ const configParsers = {
 		}
 		return command.trim();
 	},
+	'auto-rebuild'(value?: string) {
+		if (!value || value.trim() === '') return 'prompt' as const;
+		const v = value.trim().toLowerCase();
+		parseAssert('auto-rebuild', ['prompt', 'auto', 'off'].includes(v), 'Must be prompt, auto, or off');
+		return v as 'prompt' | 'auto' | 'off';
+	},
+	'rebuild-command'(value?: string) {
+		if (!value || value.trim() === '') return undefined;
+		return value.trim();
+	},
+	'rebuild-source-dir'(value?: string) {
+		if (!value || value.trim() === '') return undefined;
+		return value.trim();
+	},
 } as const;
 
 type ConfigKeys = keyof typeof configParsers;

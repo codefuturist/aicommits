@@ -12,7 +12,9 @@ import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 import prCommand from './commands/pr.js';
 import stageCommand from './commands/stage.js';
+import rebuildCommand from './commands/rebuild.js';
 import { checkAndAutoUpdate } from './utils/auto-update.js';
+import { checkAndRebuildIfStale } from './utils/dev-rebuild.js';
 
 // Auto-update check - runs in production to update under the hood
 // Skip during git hooks to avoid breaking commit flow
@@ -24,6 +26,19 @@ if (!isCalledFromGitHook && version !== '0.0.0-semantic-release') {
 		pkg,
 		distTag,
 	});
+}
+
+// Dev-rebuild check - detects stale builds for development installs
+// Skip during git hooks, for rebuild command itself, and for published versions
+if (!isCalledFromGitHook && version === '0.0.0-semantic-release') {
+	const rawArgs = process.argv.slice(2);
+	const isRebuildCommand = rawArgs[0] === 'rebuild';
+	const hasRebuildFlag = rawArgs.includes('--rebuild');
+	const hasNoRebuildFlag = rawArgs.includes('--no-rebuild');
+
+	if (!hasNoRebuildFlag && !isRebuildCommand) {
+		checkAndRebuildIfStale({ force: hasRebuildFlag });
+	}
 }
 
 const rawArgv = process.argv.slice(2);
@@ -102,7 +117,7 @@ cli(
 		},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand],
 
 		help: {
 			description,
