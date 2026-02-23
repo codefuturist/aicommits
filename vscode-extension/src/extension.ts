@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { getConfig, setApiKey } from './config';
-import { getRepository, getStagedDiff, setCommitMessage, commit as gitCommit } from './git';
+import { getRepository, getStagedDiff, hasStagedChanges, setCommitMessage, commit as gitCommit } from './git';
 import { generateCommitMessage } from './ai';
+import { AicommitsSidebarProvider } from './sidebar';
 import type { CommitType, Repository } from './types';
 
 const TIMEOUT_MS = 30_000;
 let outputChannel: vscode.OutputChannel;
 let statusBarItem: vscode.StatusBarItem;
+let sidebarProvider: AicommitsSidebarProvider;
 
 export function activate(context: vscode.ExtensionContext) {
 	outputChannel = vscode.window.createOutputChannel('AI Commits');
@@ -16,6 +18,13 @@ export function activate(context: vscode.ExtensionContext) {
 	statusBarItem.command = 'aicommits.selectModel';
 	statusBarItem.tooltip = 'AI Commits — click to change model';
 	updateStatusBar(context);
+
+	// Sidebar tree view
+	sidebarProvider = new AicommitsSidebarProvider();
+	context.subscriptions.push(
+		vscode.window.registerTreeDataProvider('aicommits.sidebar', sidebarProvider),
+	);
+	refreshSidebar(context);
 
 	// Register all commands
 	context.subscriptions.push(
@@ -44,11 +53,12 @@ export function activate(context: vscode.ExtensionContext) {
 		statusBarItem,
 	);
 
-	// Update status bar when config changes
+	// Update status bar and sidebar when config changes
 	context.subscriptions.push(
 		vscode.workspace.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration('aicommits')) {
 				updateStatusBar(context);
+				refreshSidebar(context);
 			}
 		}),
 	);
@@ -64,6 +74,23 @@ async function updateStatusBar(context: vscode.ExtensionContext) {
 		statusBarItem.show();
 	} catch {
 		statusBarItem.hide();
+	}
+}
+
+// ── Sidebar ─────────────────────────────────────────────────
+
+async function refreshSidebar(context: vscode.ExtensionContext) {
+	try {
+		const config = await getConfig(context.secrets);
+		sidebarProvider.updateConfig(config);
+
+		const hasKey = config.apiKey.length > 0;
+		await vscode.commands.executeCommand('setContext', 'aicommits.hasApiKey', hasKey);
+
+		const repo = getRepository();
+		sidebarProvider.updateStagedStatus(repo ? hasStagedChanges(repo) : false);
+	} catch {
+		// Silently ignore — sidebar will show defaults
 	}
 }
 
@@ -170,6 +197,9 @@ async function handleGenerate(
 					setCommitMessage(repo, selectedMessage);
 					vscode.window.showInformationMessage('✨ Commit message generated!');
 				}
+
+				sidebarProvider.updateLastMessage(selectedMessage);
+				sidebarProvider.updateStagedStatus(hasStagedChanges(repo));
 			} catch (error) {
 				repo.inputBox.value = originalMessage;
 				const msg = error instanceof Error ? error.message : String(error);
@@ -242,6 +272,7 @@ async function handleSetup(context: vscode.ExtensionContext) {
 	}
 
 	updateStatusBar(context);
+	refreshSidebar(context);
 	vscode.window.showInformationMessage('✅ AI Commits configured! Stage some changes and click ✨ to generate.');
 }
 
@@ -260,6 +291,7 @@ async function handleSelectModel(context: vscode.ExtensionContext) {
 			'model', model, vscode.ConfigurationTarget.Global,
 		);
 		updateStatusBar(context);
+		refreshSidebar(context);
 		vscode.window.showInformationMessage(`Model set to: ${model}`);
 	}
 }
