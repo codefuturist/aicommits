@@ -205,6 +205,7 @@
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"lint": "tsc --noEmit -p ./",
+		"test": "pnpm run compile && node --test --require tsx/cjs tests/index.ts",
 		"package": "vsce package --no-dependencies",
 		"cursor": "pnpm run package && cursor --install-extension aicommits-1.0.0.vsix"
 	},

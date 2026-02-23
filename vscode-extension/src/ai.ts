@@ -2,7 +2,7 @@ import type { AicommitsConfig, GenerationResult } from './types';
 import { generatePrompt } from './prompt';
 
 /** Clean AI response: strip reasoning tags, quotes, take first line. */
-function sanitizeMessage(message: string): string {
+export function sanitizeMessage(message: string): string {
 	// Remove <think>...</think> reasoning blocks
 	let cleaned = message.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 	// Take first line, strip trailing period, remove surrounding quotes/tags
@@ -10,7 +10,8 @@ function sanitizeMessage(message: string): string {
 		.split('\n')[0]
 		.replace(/(\w)\.$/, '$1')
 		.replace(/^["'`]|["'`]$/g, '')
-		.replace(/^<[^>]*>\s*/, '')
+		.replace(/^<[^>]*>\s*/, '') // strip leading opening tag
+		.replace(/<\/[^>]+>$/, '')  // strip trailing closing tag
 		.trim();
 }
 
