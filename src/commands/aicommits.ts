@@ -108,7 +108,8 @@ export default async (
 
 		// Check if diff is large and needs chunking
 		const MAX_FILES = 50;
-		const CHUNK_SIZE = 10;
+		const CHUNK_SIZE = 50;
+		const CHUNK_DELAY_MS = 6500; // ~9 requests/min, stays under rate limits
 		let isChunking = false;
 		if (staged.files.length > MAX_FILES) {
 			isChunking = true;
@@ -141,7 +142,8 @@ export default async (
 					totalTokens: 0,
 				};
 
-				for (const chunk of chunks) {
+				for (let ci = 0; ci < chunks.length; ci++) {
+					const chunk = chunks[ci];
 					const chunkDiff = await getStagedDiffForFiles(chunk, excludeFiles);
 					if (chunkDiff && chunkDiff.diff) {
 						// Truncate diff if too large to avoid context limits
@@ -172,6 +174,10 @@ export default async (
 								(result.usage as any).completionTokens || 0;
 							totalUsage.totalTokens += (result.usage as any).totalTokens || 0;
 						}
+					}
+					// Rate-limit delay between chunks to avoid 429s
+					if (ci < chunks.length - 1) {
+						await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS));
 					}
 				}
 
