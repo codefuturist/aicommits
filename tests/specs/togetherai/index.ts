@@ -8,7 +8,7 @@ const { TOGETHER_API_KEY } = process.env;
 export default testSuite(({ describe }) => {
 	if (!TOGETHER_API_KEY) {
 		console.warn(
-			'⚠️  process.env.TOGETHER_API_KEY is necessary to run these tests. Skipping...'
+			'⚠️  process.env.TOGETHER_API_KEY is necessary to run these tests. Skipping...',
 		);
 		return;
 	}
@@ -22,7 +22,9 @@ export default testSuite(({ describe }) => {
 			});
 
 			// Should start with conventional commit type
-			expect(commitMessage).toMatch(/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/);
+			expect(commitMessage).toMatch(
+				/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/,
+			);
 			console.log('Generated message:', commitMessage);
 		});
 
@@ -32,7 +34,9 @@ export default testSuite(({ describe }) => {
 			const commitMessage = await runGenerateCommitMessage(gitDiff);
 
 			// Should be in conventional commit format
-			expect(commitMessage).toMatch(/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/);
+			expect(commitMessage).toMatch(
+				/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/,
+			);
 			console.log('Generated message:', commitMessage);
 		});
 
@@ -42,13 +46,15 @@ export default testSuite(({ describe }) => {
 			const commitMessage = await runGenerateCommitMessage(gitDiff);
 
 			// Should be in conventional commit format
-			expect(commitMessage).toMatch(/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/);
+			expect(commitMessage).toMatch(
+				/^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/,
+			);
 			console.log('Generated message:', commitMessage);
 		});
 
 		async function runGenerateCommitMessage(
 			gitDiff: string,
-			configOverrides: Partial<ValidConfig> = {}
+			configOverrides: Partial<ValidConfig> = {},
 		): Promise<string> {
 			const config = {
 				locale: 'en',
@@ -60,13 +66,13 @@ export default testSuite(({ describe }) => {
 			const { messages: commitMessages } = await generateCommitMessage(
 				'https://api.together.xyz',
 				TOGETHER_API_KEY!,
-				'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+				'moonshotai/Kimi-K2-Instruct-0905',
 				config.locale,
 				gitDiff,
 				config.generate,
 				config['max-length'],
 				config.type,
-				7000
+				7000,
 			);
 
 			return commitMessages[0];
