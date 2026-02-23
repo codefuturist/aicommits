@@ -18,6 +18,8 @@ import {
 	getPartiallyStaged,
 	unstageFiles,
 	stageFiles,
+	getUnstagedDiffForFiles,
+	getStagedDiffForBoundary,
 } from '../utils/git.js';
 import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
@@ -74,6 +76,12 @@ export default command(
 			scan: {
 				type: Boolean,
 				description: 'Show detected project boundaries and exit (no AI calls)',
+				default: false,
+			},
+			flat: {
+				type: Boolean,
+				description: 'Skip boundary detection — let AI group all changes freely',
+				alias: 'F',
 				default: false,
 			},
 			prompt: {
@@ -204,6 +212,10 @@ export default command(
 
 			// --scan mode: show boundaries and exit (no AI needed)
 			if (argv.flags.scan) {
+				if (argv.flags.flat) {
+					outro(dim(`Flat mode — ${files.length} file${files.length === 1 ? '' : 's'} will be grouped freely by AI (no boundary detection).`));
+					return;
+				}
 				const scanSpinner = spinner();
 				scanSpinner.start('🔍 Detecting project boundaries...');
 				const boundaries = await detectProjectBoundaries(files, repoRoot);
@@ -243,8 +255,52 @@ export default command(
 
 			let groups: CommitGroup[];
 
-			// Use boundary detection for large changesets
-			if (files.length > BOUNDARY_THRESHOLD) {
+			// Helper: flat grouping — chunk files and call groupChangesWithAI per chunk
+			const runFlatGrouping = async (): Promise<CommitGroup[]> => {
+				const getDiff = isStaged ? getStagedDiffForBoundary : getUnstagedDiffForFiles;
+				const chunks: string[][] = [];
+				for (let i = 0; i < files.length; i += BOUNDARY_THRESHOLD) {
+					chunks.push(files.slice(i, i + BOUNDARY_THRESHOLD));
+				}
+
+				const s = spinner();
+				const totalChunks = chunks.length;
+				s.start(totalChunks > 1
+					? `🤖 Analyzing ${files.length} files in ${totalChunks} chunks (flat mode)...`
+					: '🤖 Analyzing changes to suggest commit groups...');
+				const startTime = Date.now();
+
+				const allGroups: CommitGroup[] = [];
+				for (let i = 0; i < chunks.length; i++) {
+					if (totalChunks > 1) {
+						s.message(`🤖 [${i + 1}/${totalChunks}] Analyzing chunk ${i + 1}...`);
+					}
+					const chunkDiff = await getDiff(chunks[i]);
+					const result = await groupChangesWithAI(
+						baseUrl,
+						apiKey,
+						config.model!,
+						config.locale,
+						chunks[i],
+						chunkDiff,
+						maxGroups * 2,
+						config.type,
+						timeout,
+						argv.flags.prompt,
+					);
+					allGroups.push(...result.groups);
+				}
+
+				const duration = Date.now() - startTime;
+				s.stop(`✅ Grouped into ${allGroups.length} commit${allGroups.length === 1 ? '' : 's'} in ${(duration / 1000).toFixed(1)}s`);
+				return allGroups;
+			};
+
+			// Use flat grouping when --flat is set, or boundary detection otherwise
+			if (argv.flags.flat) {
+				groups = await runFlatGrouping();
+			} else if (files.length > BOUNDARY_THRESHOLD) {
+				// Use boundary detection for large changesets
 				const boundarySpinner = spinner();
 				boundarySpinner.start('🔍 Detecting project boundaries...');
 				const boundaries = await detectProjectBoundaries(files, repoRoot);
@@ -252,12 +308,14 @@ export default command(
 
 				// Interactive boundary selection (unless --yes or --scope)
 				let selectedBoundaries = boundaries;
+				let useFlatMode = false;
 				if (!argv.flags.yes && !argv.flags.scope && !argv.flags.dryRun && boundaries.length > 1) {
 					const boundaryAction = await select({
 						message: `Process all ${boundaries.length} boundaries, or select specific ones?`,
 						options: [
 							{ value: 'all', label: `Process all ${boundaries.length} boundaries` },
 							{ value: 'select', label: 'Select which boundaries to process' },
+							{ value: 'flat', label: 'Group without boundaries (flat — AI decides freely)' },
 							{ value: 'cancel', label: 'Cancel' },
 						],
 					});
@@ -267,7 +325,9 @@ export default command(
 						return;
 					}
 
-					if (boundaryAction === 'select') {
+					if (boundaryAction === 'flat') {
+						useFlatMode = true;
+					} else if (boundaryAction === 'select') {
 						const selected = await multiselect({
 							message: 'Select boundaries to process:',
 							options: boundaries.map((b, i) => ({
@@ -286,29 +346,33 @@ export default command(
 					}
 				}
 
-				const s = spinner();
-				s.start(`🤖 Analyzing ${selectedBoundaries.length} boundaries...`);
-				const startTime = Date.now();
+				if (useFlatMode) {
+					groups = await runFlatGrouping();
+				} else {
+					const s = spinner();
+					s.start(`🤖 Analyzing ${selectedBoundaries.length} boundaries...`);
+					const startTime = Date.now();
 
-				const result = await groupBoundariesWithAI(
-					baseUrl,
-					apiKey,
-					config.model!,
-					config.locale,
-					selectedBoundaries,
-					maxGroups,
-					config.type,
-					timeout,
-					argv.flags.prompt,
-					(name, index, total) => {
-						s.message(`🤖 [${index + 1}/${total}] Analyzing ${name}...`);
-					},
-					isStaged,
-				);
+					const result = await groupBoundariesWithAI(
+						baseUrl,
+						apiKey,
+						config.model!,
+						config.locale,
+						selectedBoundaries,
+						maxGroups,
+						config.type,
+						timeout,
+						argv.flags.prompt,
+						(name, index, total) => {
+							s.message(`🤖 [${index + 1}/${total}] Analyzing ${name}...`);
+						},
+						isStaged,
+					);
 
-				groups = result.groups;
-				const duration = Date.now() - startTime;
-				s.stop(`✅ Grouped into ${groups.length} commit${groups.length === 1 ? '' : 's'} in ${(duration / 1000).toFixed(1)}s`);
+					groups = result.groups;
+					const duration = Date.now() - startTime;
+					s.stop(`✅ Grouped into ${groups.length} commit${groups.length === 1 ? '' : 's'} in ${(duration / 1000).toFixed(1)}s`);
+				}
 			} else {
 				// Small changeset: single AI call (original behavior)
 				const s = spinner();
