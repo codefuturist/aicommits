@@ -20,6 +20,7 @@ export interface Repository {
 	state: RepositoryState;
 	diff(cached?: boolean): Promise<string>;
 	commit(message: string, opts?: CommitOptions): Promise<void>;
+	onDidRunGitStatus: vscode.Event<void>;
 }
 
 export interface InputBox {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getConfig, setApiKey } from './config';
-import { getRepository, getStagedDiff, hasStagedChanges, setCommitMessage, commit as gitCommit } from './git';
+import { getRepository, getStagedDiff, setCommitMessage, commit as gitCommit } from './git';
 import { generateCommitMessage } from './ai';
 import { AicommitsSidebarProvider } from './sidebar';
 import type { CommitType, Repository } from './types';
@@ -25,6 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerTreeDataProvider('aicommits.sidebar', sidebarProvider),
 	);
 	refreshSidebar(context);
+
+	// Watch git state changes to update staged files in sidebar
+	watchGitState(context);
 
 	// Register all commands
 	context.subscriptions.push(
@@ -88,10 +91,22 @@ async function refreshSidebar(context: vscode.ExtensionContext) {
 		await vscode.commands.executeCommand('setContext', 'aicommits.hasApiKey', hasKey);
 
 		const repo = getRepository();
-		sidebarProvider.updateStagedStatus(repo ? hasStagedChanges(repo) : false);
+		sidebarProvider.updateStagedChanges(repo ? repo.state.indexChanges : []);
 	} catch {
 		// Silently ignore — sidebar will show defaults
 	}
+}
+
+/** Watch git repository state and refresh sidebar when staged files change. */
+function watchGitState(context: vscode.ExtensionContext) {
+	const repo = getRepository();
+	if (!repo) { return; }
+
+	context.subscriptions.push(
+		repo.onDidRunGitStatus(() => {
+			sidebarProvider.updateStagedChanges(repo.state.indexChanges);
+		}),
+	);
 }
 
 // ── Generate Command ────────────────────────────────────────
@@ -199,7 +214,7 @@ async function handleGenerate(
 				}
 
 				sidebarProvider.updateLastMessage(selectedMessage);
-				sidebarProvider.updateStagedStatus(hasStagedChanges(repo));
+				sidebarProvider.updateStagedChanges(repo.state.indexChanges);
 			} catch (error) {
 				repo.inputBox.value = originalMessage;
 				const msg = error instanceof Error ? error.message : String(error);
