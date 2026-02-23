@@ -30,7 +30,7 @@
 		"lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1 | grep -v vscode-extension || true",
 		"type-check": "tsc",
 		"test": "tsx tests",
-		"prepack": "pnpm build && clean-pkg-json",
+		"prepack": "clean-pkg-json",
 		"compile": "bun build dist/cli.mjs --compile --minify --bytecode --outfile ./aicommits",
 		"compile:install": "bun build dist/cli.mjs --compile --minify --bytecode --outfile ./aicommits && node dist/cli.mjs install --binary"
 	},
