@@ -16,6 +16,7 @@ import rebuildCommand from './commands/rebuild.js';
 import installCommand from './commands/install.js';
 import uninstallCommand from './commands/uninstall.js';
 import doctorCommand from './commands/doctor.js';
+import compileCommand from './commands/compile.js';
 import { checkAndAutoUpdate } from './utils/auto-update.js';
 import { checkAndRebuildIfStale } from './utils/dev-rebuild.js';
 
@@ -36,7 +37,7 @@ if (!isCalledFromGitHook && version !== '0.0.0-semantic-release') {
 if (!isCalledFromGitHook && version === '0.0.0-semantic-release') {
 	const rawArgs = process.argv.slice(2);
 	const isRebuildCommand = rawArgs[0] === 'rebuild';
-	const isInstallCommand = rawArgs[0] === 'install' || rawArgs[0] === 'uninstall';
+	const isInstallCommand = rawArgs[0] === 'install' || rawArgs[0] === 'uninstall' || rawArgs[0] === 'compile';
 	const hasRebuildFlag = rawArgs.includes('--rebuild');
 	const hasNoRebuildFlag = rawArgs.includes('--no-rebuild');
 
@@ -125,7 +126,7 @@ cli(
 		},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand, doctorCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand, doctorCommand, compileCommand],
 
 		help: {
 			description: `${description}
@@ -160,6 +161,7 @@ Examples:
   # Installation & maintenance
   aicommits hook install             Auto-generate messages on every git commit
   aicommits install                  Install binary to ~/.local/bin
+  aicommits compile                  Compile standalone native binary (via Bun)
   aicommits doctor                   Check for PATH conflicts`,
 		},
 

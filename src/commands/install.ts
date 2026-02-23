@@ -60,6 +60,7 @@ Examples:
   aicommits install                    Install to ~/.local/bin (user scope)
   aicommits install --scope system     Install to /usr/local/bin (needs sudo)
   aicommits install --bin-dir ~/bin    Install to a custom directory
+  aicommits install --binary           Compile a standalone native binary via Bun
   aicommits install --info             Show current installation details`,
 		},
 		parameters: [],
@@ -83,12 +84,33 @@ Examples:
 				alias: 'f',
 				default: false,
 			},
+			binary: {
+				type: Boolean,
+				description: 'Compile a standalone native binary via Bun instead of a shell wrapper',
+				default: false,
+			},
 		},
 	},
 	(argv) => {
 		(async () => {
 			if (argv.flags.info) {
 				showInstallInfo();
+				return;
+			}
+
+			// --binary: delegate to compile --install
+			if (argv.flags.binary) {
+				const { execSync } = await import('child_process');
+				const args = ['compile', '--install'];
+				if (argv.flags.scope) args.push('--scope', argv.flags.scope);
+				try {
+					execSync(`node ${resolve(getProjectEntrypoint())} ${args.join(' ')}`, {
+						stdio: 'inherit',
+						cwd: process.cwd(),
+					});
+				} catch {
+					process.exit(1);
+				}
 				return;
 			}
 
