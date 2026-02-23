@@ -114,3 +114,52 @@ export const getDetectedMessage = (files: string[]) =>
 	`Detected ${files.length.toLocaleString()} staged file${
 		files.length > 1 ? 's' : ''
 	}`;
+
+export const getUnstagedChanges = async (includeUntracked?: boolean) => {
+	// Get modified tracked files
+	const { stdout: modifiedOutput } = await execa('git', [
+		'diff',
+		'--name-only',
+		'--diff-algorithm=minimal',
+	]);
+
+	const modifiedFiles = modifiedOutput.split('\n').filter(Boolean);
+
+	let untrackedFiles: string[] = [];
+	if (includeUntracked) {
+		const { stdout: untrackedOutput } = await execa('git', [
+			'ls-files',
+			'--others',
+			'--exclude-standard',
+		]);
+		untrackedFiles = untrackedOutput.split('\n').filter(Boolean);
+	}
+
+	const allFiles = [...modifiedFiles, ...untrackedFiles];
+	if (allFiles.length === 0) return;
+
+	// Get diff for modified files (untracked files have no diff yet)
+	let diff = '';
+	if (modifiedFiles.length > 0) {
+		const hasNonLockFiles = modifiedFiles.some((f) => !isLockFile(f));
+		const excludes = hasNonLockFiles ? filesToExclude : [];
+
+		const { stdout } = await execa('git', [
+			'diff',
+			'--diff-algorithm=minimal',
+			...excludes,
+		]);
+		diff = stdout;
+	}
+
+	return {
+		files: allFiles,
+		modifiedFiles,
+		untrackedFiles,
+		diff,
+	};
+};
+
+export const stageFiles = async (files: string[]) => {
+	await execa('git', ['add', '--', ...files]);
+};

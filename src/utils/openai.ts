@@ -253,3 +253,105 @@ Do not add thanks, explanations, or any text outside the commit message.`;
 		throw errorAsAny;
 	}
 };
+
+export interface CommitGroup {
+	message: string;
+	files: string[];
+}
+
+export const groupChangesWithAI = async (
+	baseUrl: string,
+	apiKey: string,
+	model: string,
+	locale: string,
+	files: string[],
+	diff: string,
+	maxGroups: number,
+	type: CommitType,
+	timeout: number,
+	customPrompt?: string,
+) => {
+	try {
+		const provider =
+			baseUrl === 'https://api.openai.com/v1'
+				? createOpenAI({ apiKey })
+				: createOpenAICompatible({
+						name: 'custom',
+						apiKey,
+						baseURL: baseUrl,
+				  });
+
+		const abortController = new AbortController();
+		const timeoutId = setTimeout(() => abortController.abort(), timeout);
+
+		const typeHint = type === 'conventional'
+			? 'Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, test:, etc.).'
+			: type === 'gitmoji'
+				? 'Use gitmoji format (🐛, ✨, 🔧, etc.).'
+				: 'Use a plain descriptive format.';
+
+		const system = `You group git file changes into logical atomic commits. Each group is one coherent change.
+
+Rules:
+- Every file must appear in exactly one group.
+- Group by logical purpose (feature, bugfix, refactor, config, etc.).
+- Related test files go with their implementation files.
+- Config/dependency changes get their own group.
+- Maximum ${maxGroups} groups. Fewer is better if changes are related.
+- ${typeHint}
+${customPrompt ? `- Additional instructions: ${customPrompt}` : ''}
+- Write messages in language: ${locale}.
+
+Return ONLY a JSON array, no other text:
+[{"message": "commit message here", "files": ["path/to/file"]}]`;
+
+		// Truncate diff if too large
+		const maxDiffLength = 30000;
+		let diffToSend = diff;
+		if (diff.length > maxDiffLength) {
+			diffToSend = diff.substring(0, maxDiffLength) + '\n\n[Diff truncated]';
+		}
+
+		const prompt = `Files changed:\n${files.join('\n')}\n\nDiff:\n${diffToSend}`;
+
+		const result = await generateText({
+			model: provider(model),
+			system,
+			prompt,
+			temperature: 0.3,
+			maxRetries: 2,
+			maxOutputTokens: 4000,
+		});
+
+		clearTimeout(timeoutId);
+
+		// Parse JSON from response (handle markdown code blocks)
+		let text = extractResponseFromReasoning(result.text).trim();
+		const jsonMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/) || text.match(/(\[[\s\S]*\])/);
+		if (jsonMatch) {
+			text = jsonMatch[1].trim();
+		}
+
+		const groups: CommitGroup[] = JSON.parse(text);
+
+		// Validate: ensure all files are covered and no extras
+		const groupedFiles = new Set(groups.flatMap((g) => g.files));
+		const inputFiles = new Set(files);
+		const missing = files.filter((f) => !groupedFiles.has(f));
+		if (missing.length > 0) {
+			groups[groups.length - 1].files.push(...missing);
+		}
+		for (const group of groups) {
+			group.files = group.files.filter((f) => inputFiles.has(f));
+		}
+		const validGroups = groups.filter((g) => g.files.length > 0);
+
+		return { groups: validGroups, usage: result.usage };
+	} catch (error) {
+		// Fallback: put all files in one group
+		return {
+			groups: [{ message: 'chore: update files', files }] as CommitGroup[],
+			usage: null,
+		};
+	}
+};

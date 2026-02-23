@@ -11,6 +11,7 @@ import setupCommand from './commands/setup.js';
 import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 import prCommand from './commands/pr.js';
+import stageCommand from './commands/stage.js';
 import { checkAndAutoUpdate } from './utils/auto-update.js';
 
 // Auto-update check - runs in production to update under the hood
@@ -95,7 +96,7 @@ cli(
 		},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand],
 
 		help: {
 			description,
