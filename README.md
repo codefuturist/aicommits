@@ -16,7 +16,7 @@
 
 1. Install _aicommits_:
 
-   **From this fork (includes GitHub Copilot & Mistral providers):**
+   **From this fork (includes GitHub Copilot & Mistral providers, `split` command):**
 
    ```sh
    pnpm add -g "https://gitpkg.now.sh/codefuturist/monorepository/apps/cli/aicommits?develop"
@@ -51,14 +51,14 @@ This will guide you through:
 
   Supported providers include:
 
-  - **GitHub Copilot** - Uses [GitHub Models API](https://github.com/marketplace/models). Auto-detects token via `gh` CLI. Requires a GitHub PAT with `models:read` scope.
-  - **Mistral AI** - Get your API key from [console.mistral.ai](https://console.mistral.ai)
-  - **TogetherAI** - Get your API key from [TogetherAI](https://api.together.ai/)
-  - **OpenAI** - Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
-  - **OpenRouter** - Get your API key from [OpenRouter](https://openrouter.ai/keys)
-  - **Ollama** (local) - Run AI models locally with [Ollama](https://ollama.ai)
-  - **LM Studio** (local) - No API key required. Runs on your computer via [LM Studio](https://lmstudio.ai/)
-  - **Custom OpenAI-compatible endpoint** - Use any service that implements the OpenAI API
+  - **GitHub Copilot** — Uses [GitHub Models API](https://github.com/marketplace/models). Auto-detects token via `gh` CLI. No separate API key needed.
+  - **Mistral AI** — Get your API key from [console.mistral.ai](https://console.mistral.ai)
+  - **TogetherAI** — Get your API key from [TogetherAI](https://api.together.ai/)
+  - **OpenAI** — Get your API key from [OpenAI API Keys page](https://platform.openai.com/account/api-keys)
+  - **OpenRouter** — Get your API key from [OpenRouter](https://openrouter.ai/keys)
+  - **Ollama** (local) — Run AI models locally with [Ollama](https://ollama.ai)
+  - **LM Studio** (local) — No API key required. Runs on your computer via [LM Studio](https://lmstudio.ai/)
+  - **Custom OpenAI-compatible endpoint** — Use any service that implements the OpenAI API
 
   **For CI/CD environments**, you can also set up configuration via the config file:
 
@@ -76,17 +76,11 @@ This will guide you through:
 
 Check the installed version with:
 
-```
-
-aicommits --version
-
-```
-
-If it's not the [latest version](https://github.com/Nutlope/aicommits/releases/latest), run:
-
 ```sh
-npm install -g aicommits@develop
+aicommits --version
 ```
+
+If it's not the latest version, reinstall with the same install command above.
 
 ## Usage
 
@@ -101,13 +95,13 @@ aicommits
 
 `aicommits` passes down unknown flags to `git commit`, so you can pass in [`commit` flags](https://git-scm.com/docs/git-commit).
 
-For example, you can stage all changes in tracked files with as you commit:
+For example, you can stage all changes in tracked files as you commit:
 
 ```sh
 aicommits --all # or -a
 ```
 
-> 👉 **Tip:** Use the `aic` alias if `aicommits` is too long for you.
+> 👉 **Tip:** Use the `aic` alias if `aicommits` is too long for you.
 
 #### CLI Options
 
@@ -116,6 +110,7 @@ aicommits --all # or -a
 - `--generate` or `-g`: Number of messages to generate (default: **1**)
 - `--exclude` or `-x`: Files to exclude from AI analysis
 - `--type` or `-t`: Git commit message format (default: **plain**). Supports `plain`, `conventional`, and `gitmoji`
+- `--prompt` or `-p`: Custom prompt to guide the AI behavior (e.g., language, style)
 - `--yes` or `-y`: Skip confirmation when committing after message generation (default: **false**)
 
 #### Generate multiple recommendations
@@ -144,7 +139,86 @@ aicommits --type gitmoji       # or -t gitmoji
 aicommits --type plain         # or -t plain (default)
 ```
 
-This feature is useful if your project follows a specific commit message standard or if you're using tools that rely on these commit formats.
+### AI-powered commit splitting (`aicommits split`)
+
+The `split` command uses AI to **group your changes into multiple logical atomic commits** — perfect for large changesets or mixed work.
+
+```sh
+aicommits split
+```
+
+> **Alias:** `aicommits stage` also works for backward compatibility.
+
+#### How it works
+
+1. Detects changed files (unstaged by default)
+2. For large repos, auto-detects **project boundaries** (package.json, pyproject.toml, go.mod, Cargo.toml, Chart.yaml, etc.) to avoid overloading the AI
+3. Groups files into logical commits using AI
+4. Presents groups for review, then stages and commits each one
+
+#### Split — Flags
+
+| Flag | Alias | Description |
+|------|-------|-------------|
+| `--staged` | `-S` | Split **already-staged** files into multiple commits |
+| `--all` | `-a` | Include untracked files (unstaged mode only) |
+| `--dry-run` | `-d` | Show proposed groups without committing |
+| `--scan` | | Show detected project boundaries and exit (no AI calls) |
+| `--yes` | `-y` | Auto-commit all groups without confirmation |
+| `--max-groups` | `-m` | Maximum groups per boundary (default: 3) |
+| `--scope` | `-s` | Only process changes in a specific directory/boundary |
+| `--type` | `-t` | Commit message format (`plain`, `conventional`, `gitmoji`) |
+| `--prompt` | `-p` | Custom prompt to guide grouping behavior |
+
+#### Examples
+
+```sh
+# Preview proposed groups without committing
+aicommits split --dry-run
+
+# Auto-commit all groups (no confirmation)
+aicommits split --yes
+
+# Include untracked files
+aicommits split --all
+
+# Split already-staged files into multiple commits
+git add -A
+aicommits split --staged
+
+# Show detected project boundaries first
+aicommits split --scan
+
+# Focus on a specific subdirectory
+aicommits split --scope apps/api
+
+# Use conventional commits format
+aicommits split --type conventional
+
+# Guided grouping with a custom prompt
+aicommits split --prompt "Group by feature area, keep docs separate"
+```
+
+#### Staged mode (`--staged`)
+
+When you have files already staged with `git add`, use `--staged` to split them into multiple atomic commits instead of one big one:
+
+```sh
+git add -A               # stage everything
+aicommits split --staged # AI splits into logical groups, commits each
+```
+
+> ⚠️ **Partially staged files** (where only some hunks are staged): you'll be warned that proceeding will stage ALL changes for those files.
+
+#### Project boundary detection
+
+For large repos with many changed files, `aicommits split` automatically detects project boundaries — subdirectories that are independent projects (detected via `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `Chart.yaml`, etc.). Each boundary is analyzed separately to avoid overloading the AI and produce more meaningful groupings.
+
+Use `--scan` to see what boundaries were detected without making any AI calls:
+
+```sh
+aicommits split --scan
+```
 
 ### Git hook
 
@@ -272,7 +346,7 @@ aicommits config set OPENAI_API_KEY=<your-api-key> generate=3 locale=en
 
 #### OPENAI_API_KEY
 
-Your OpenAI API key or custom provider API Key
+Your OpenAI API key or custom provider API Key.
 
 #### OPENAI_BASE_URL
 
@@ -284,7 +358,7 @@ Model to use for OpenAI-compatible providers.
 
 #### provider
 
-The selected AI provider. Set automatically during `aicommits setup`. Valid values: `openai`, `togetherai`, `ollama`, `custom`.
+The selected AI provider. Set automatically during `aicommits setup`. Valid values: `openai`, `copilot`, `mistral`, `togetherai`, `openrouter`, `ollama`, `lmstudio`, `custom`.
 
 #### locale
 
@@ -302,7 +376,7 @@ Note, this will use more tokens as it generates more results.
 
 #### timeout
 
-The timeout for network requests to the OpenAI API in milliseconds.
+The timeout for network requests in milliseconds.
 
 Default: `10000` (10 seconds)
 
@@ -340,9 +414,9 @@ aicommits config set type=plain
 
 ## How it works
 
-This CLI tool runs `git diff` to grab all your latest code changes, sends them to the configured AI provider (TogetherAI by default), then returns the AI generated commit message.
+This CLI tool runs `git diff` to grab all your latest code changes, sends them to the configured AI provider, then returns the AI generated commit message.
 
-Video coming soon where I rebuild it from scratch to show you how to easily build your own CLI tools powered by AI.
+The `split` command uses project boundary detection to intelligently split large diffs into focused per-project chunks before sending to the AI, preventing rate limiting and producing more contextually accurate groupings.
 
 ## Maintainers
 
