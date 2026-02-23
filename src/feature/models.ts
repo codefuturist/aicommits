@@ -72,8 +72,10 @@ const writeCache = async (key: string, entry: CacheEntry): Promise<void> => {
 export const fetchModels = async (
 	baseUrl: string,
 	apiKey: string,
+	modelsUrl?: string,
 ): Promise<{ models: ModelObject[]; error?: string }> => {
-	const cacheKey = getCacheKey(baseUrl);
+	const effectiveUrl = modelsUrl || `${baseUrl}/models`;
+	const cacheKey = getCacheKey(effectiveUrl);
 	const now = Date.now();
 	const cached = await readCache(cacheKey);
 
@@ -82,7 +84,7 @@ export const fetchModels = async (
 	}
 
 	try {
-		const response = await fetch(`${baseUrl}/models`, {
+		const response = await fetch(effectiveUrl, {
 			headers: {
 				Authorization: `Bearer ${apiKey}`,
 			},
@@ -117,7 +119,7 @@ const fetchAndFilterModels = async (
 	providerDef?: ProviderDef,
 ): Promise<string[]> => {
 	// Fetch models
-	const result = await fetchModels(baseUrl, apiKey);
+	const result = await fetchModels(baseUrl, apiKey, providerDef?.modelsUrl);
 
 	if (result.error) {
 		console.error(`Failed to fetch models: ${result.error}`);

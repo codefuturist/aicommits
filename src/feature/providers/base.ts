@@ -9,6 +9,9 @@ export type ProviderDef = {
 	modelsFilter?: (models: any[]) => string[];
 	defaultModels: string[];
 	requiresApiKey: boolean;
+	modelsUrl?: string;
+	apiKeyHint?: string;
+	setupHook?: () => Promise<string | null>;
 };
 
 export class Provider {
@@ -33,18 +36,38 @@ export class Provider {
 	}
 
 	async setup(): Promise<[string, string][]> {
-		const { text, password, isCancel } = await import('@clack/prompts');
+		const { text, password, confirm, isCancel } = await import('@clack/prompts');
 		const updates: [string, string][] = [];
 
 		if (this.def.requiresApiKey) {
+			// Try auto-detecting a token via setupHook (e.g., gh auth token)
+			let autoToken: string | null = null;
+			if (this.def.setupHook) {
+				autoToken = await this.def.setupHook();
+			}
+
+			if (autoToken) {
+				const masked = autoToken.substring(0, 6) + '****';
+				const useAuto = await confirm({
+					message: `Found token (${masked}). Use this?`,
+				});
+				if (isCancel(useAuto)) {
+					throw new Error('Setup cancelled');
+				}
+				if (useAuto) {
+					updates.push(['OPENAI_API_KEY', autoToken]);
+					return updates;
+				}
+			}
+
 			const currentKey = this.getApiKey();
+			const keyPrompt = this.def.apiKeyHint
+				? `Enter your ${this.def.apiKeyHint}:`
+				: currentKey
+					? `Enter your API key (leave empty to keep current: ${currentKey.substring(0, 4)}****):`
+					: 'Enter your API key:';
 			const apiKey = await password({
-				message: currentKey
-					? `Enter your API key (leave empty to keep current: ${currentKey.substring(
-							0,
-							4
-					  )}****):`
-					: 'Enter your API key:',
+				message: keyPrompt,
 				validate: (value) => {
 					if (!value && !currentKey) return 'API key is required';
 					return;
@@ -78,7 +101,7 @@ export class Provider {
 	async getModels(): Promise<{ models: string[]; error?: string }> {
 		const baseUrl = this.getBaseUrl();
 		const apiKey = this.getApiKey() || '';
-		const result = await fetchModels(baseUrl, apiKey);
+		const result = await fetchModels(baseUrl, apiKey, this.def.modelsUrl);
 		if (result.error) return { models: [], error: result.error };
 
 		let models: string[];

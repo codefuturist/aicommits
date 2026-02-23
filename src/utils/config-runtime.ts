@@ -26,7 +26,8 @@ const detectProvider = (
 		const matchingProvider = providers.find(
 			(p) =>
 				p.baseUrl === baseUrl ||
-				(p.name === 'ollama' && baseUrl.startsWith(p.baseUrl.slice(0, -3)))
+				(p.name === 'ollama' && baseUrl.startsWith(p.baseUrl.slice(0, -3))) ||
+				(p.name === 'copilot' && baseUrl.includes('models.github.ai'))
 		);
 		if (matchingProvider) {
 			return matchingProvider.name;
