@@ -19,19 +19,19 @@
    **From this fork (includes GitHub Copilot & Mistral providers, `split` command):**
 
    ```sh
-   # One-liner — clone, link, ready to use (works on any platform)
-   git clone --depth 1 -b develop https://github.com/codefuturist/aicommits.git ~/.aicommits-cli && cd ~/.aicommits-cli && npm link
-   ```
-
-   Or with pnpm:
-
-   ```sh
+   # pnpm (Recommended) — install directly from GitHub, no clone needed
    pnpm add -g --allow-build=aicommits "git+https://github.com/codefuturist/aicommits.git#develop"
    ```
 
    > **`--allow-build`** is required by pnpm v9+ security policy so the package can run its `prepare` build script during install.
-   >
-   > **Note:** `npm install -g github:...` is [broken in npm 11](https://github.com/npm/cli/issues/8440) for packages with build steps. Use the `git clone && npm link` one-liner above instead.
+   > If pnpm is not in PATH, run `pnpm setup` first (adds `PNPM_HOME` to your shell profile).
+
+   Or with npm:
+
+   ```sh
+   # npm — clone and link (npm install -g from git is broken: npm/cli#8440)
+   git clone --depth 1 -b develop https://github.com/codefuturist/aicommits.git ~/.aicommits-cli && cd ~/.aicommits-cli && npm link
+   ```
 
    **From the original npm package:**
 
