@@ -13,6 +13,8 @@ import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 import prCommand from './commands/pr.js';
 import stageCommand from './commands/stage.js';
 import rebuildCommand from './commands/rebuild.js';
+import installCommand from './commands/install.js';
+import uninstallCommand from './commands/uninstall.js';
 import { checkAndAutoUpdate } from './utils/auto-update.js';
 import { checkAndRebuildIfStale } from './utils/dev-rebuild.js';
 
@@ -33,10 +35,11 @@ if (!isCalledFromGitHook && version !== '0.0.0-semantic-release') {
 if (!isCalledFromGitHook && version === '0.0.0-semantic-release') {
 	const rawArgs = process.argv.slice(2);
 	const isRebuildCommand = rawArgs[0] === 'rebuild';
+	const isInstallCommand = rawArgs[0] === 'install' || rawArgs[0] === 'uninstall';
 	const hasRebuildFlag = rawArgs.includes('--rebuild');
 	const hasNoRebuildFlag = rawArgs.includes('--no-rebuild');
 
-	if (!hasNoRebuildFlag && !isRebuildCommand) {
+	if (!hasNoRebuildFlag && !isRebuildCommand && !isInstallCommand) {
 		checkAndRebuildIfStale({ force: hasRebuildFlag });
 	}
 }
@@ -117,7 +120,7 @@ cli(
 		},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand],
 
 		help: {
 			description,
