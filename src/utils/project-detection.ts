@@ -273,3 +273,54 @@ export function formatBoundarySummary(boundaries: ProjectBoundary[]): string {
 	}
 	return lines.join('\n');
 }
+
+const TYPE_ICONS: Record<string, string> = {
+	node: '📦',
+	python: '🐍',
+	rust: '🦀',
+	go: '🐹',
+	java: '☕',
+	ruby: '💎',
+	helm: '⎈',
+	docker: '🐳',
+	ansible: '🔧',
+	taskrunner: '⚙️',
+	submodule: '📎',
+	misc: '📂',
+};
+
+/**
+ * Format a detailed boundary overview for --scan display.
+ * Shows a visual bar chart, type icons, and sample files per boundary.
+ */
+export function formatBoundaryDetails(boundaries: ProjectBoundary[]): string {
+	const totalFiles = boundaries.reduce((sum, b) => sum + b.files.length, 0);
+	const maxBar = 30;
+	const maxFiles = Math.max(...boundaries.map((b) => b.files.length));
+	const lines: string[] = [];
+
+	for (const b of boundaries) {
+		const icon = TYPE_ICONS[b.type] || '📁';
+		const pct = totalFiles > 0 ? Math.round((b.files.length / totalFiles) * 100) : 0;
+		const barLen = maxFiles > 0 ? Math.max(1, Math.round((b.files.length / maxFiles) * maxBar)) : 1;
+		const bar = '█'.repeat(barLen);
+		const autoTag = b.autoGroup ? ' [auto]' : '';
+		const countStr = `${b.files.length}`.padStart(4);
+
+		lines.push(`  ${icon} ${b.name}`);
+		lines.push(`     ${bar} ${countStr} files (${pct}%) · ${b.type}${autoTag}`);
+
+		// Show sample files (up to 3)
+		const samples = b.files.slice(0, 3);
+		for (const f of samples) {
+			lines.push(`     · ${f}`);
+		}
+		if (b.files.length > 3) {
+			lines.push(`     · … ${b.files.length - 3} more`);
+		}
+		lines.push('');
+	}
+
+	lines.push(`  Total: ${totalFiles} files across ${boundaries.length} boundaries`);
+	return lines.join('\n');
+}

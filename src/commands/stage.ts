@@ -19,7 +19,7 @@ import {
 import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { groupChangesWithAI, groupBoundariesWithAI, type CommitGroup } from '../utils/openai.js';
-import { detectProjectBoundaries, formatBoundarySummary } from '../utils/project-detection.js';
+import { detectProjectBoundaries, formatBoundarySummary, formatBoundaryDetails } from '../utils/project-detection.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 
 const BOUNDARY_THRESHOLD = 50;
@@ -60,6 +60,11 @@ export default command(
 				type: String,
 				description: 'Only process changes in a specific directory/boundary',
 				alias: 's',
+			},
+			scan: {
+				type: Boolean,
+				description: 'Show detected project boundaries and exit (no AI calls)',
+				default: false,
 			},
 			prompt: {
 				type: String,
@@ -114,6 +119,20 @@ export default command(
 				filesSummary += `:\n${files.map((f) => `     ${f}`).join('\n')}`;
 			}
 			detectingFiles.stop(filesSummary);
+
+			// --scan mode: show boundaries and exit (no AI needed)
+			if (argv.flags.scan) {
+				const scanSpinner = spinner();
+				scanSpinner.start('🔍 Detecting project boundaries...');
+				const boundaries = await detectProjectBoundaries(files, repoRoot);
+				scanSpinner.stop(formatBoundarySummary(boundaries));
+
+				console.log('');
+				console.log(formatBoundaryDetails(boundaries));
+
+				outro(dim(`Use ${green('aicommits stage')} to group and commit, or ${green('--scope <dir>')} to focus on one boundary.`));
+				return;
+			}
 
 			// Load config and provider
 			const config = await getConfig({
