@@ -71,7 +71,7 @@ const writeCache = async (key: string, entry: CacheEntry): Promise<void> => {
 // Fetch models from API
 export const fetchModels = async (
 	baseUrl: string,
-	apiKey: string
+	apiKey: string,
 ): Promise<{ models: ModelObject[]; error?: string }> => {
 	const cacheKey = getCacheKey(baseUrl);
 	const now = Date.now();
@@ -114,7 +114,7 @@ export const fetchModels = async (
 const fetchAndFilterModels = async (
 	baseUrl: string,
 	apiKey: string,
-	providerDef?: ProviderDef
+	providerDef?: ProviderDef,
 ): Promise<string[]> => {
 	// Fetch models
 	const result = await fetchModels(baseUrl, apiKey);
@@ -139,7 +139,7 @@ const fetchAndFilterModels = async (
 const prepareModelOptions = (
 	models: string[],
 	currentModel?: string,
-	providerDef?: ProviderDef
+	providerDef?: ProviderDef,
 ) => {
 	let modelOptions = models.map((model: string) => ({
 		label: model,
@@ -148,25 +148,25 @@ const prepareModelOptions = (
 
 	// Move highlighted models to the top
 	if (providerDef?.defaultModels && providerDef.defaultModels.length > 0) {
-		const highlightedModels = providerDef.defaultModels.filter(model => 
-			modelOptions.some(opt => opt.value === model)
+		const highlightedModels = providerDef.defaultModels.filter((model) =>
+			modelOptions.some((opt) => opt.value === model),
 		);
-		
+
 		// Remove highlighted models from their current positions
-		highlightedModels.forEach(model => {
-			const index = modelOptions.findIndex(opt => opt.value === model);
+		highlightedModels.forEach((model) => {
+			const index = modelOptions.findIndex((opt) => opt.value === model);
 			if (index >= 0) {
 				modelOptions.splice(index, 1);
 			}
 		});
-		
+
 		// Add highlighted models at the beginning with special labels
 		highlightedModels.forEach((model, index) => {
 			const isCurrent = model === currentModel;
 			const isDefault = index === 0;
 			let label: string;
 			if (isCurrent) {
-				label = `✓ ${model} (current)`;
+				label = `✅ ${model} (current)`;
 			} else if (isDefault) {
 				label = `👑 ${model} (default)`;
 			} else {
@@ -180,13 +180,13 @@ const prepareModelOptions = (
 	if (currentModel && currentModel !== 'undefined') {
 		const isHighlighted = providerDef?.defaultModels?.includes(currentModel);
 		const currentIndex = modelOptions.findIndex(
-			(opt) => opt.value === currentModel
+			(opt) => opt.value === currentModel,
 		);
-		
+
 		if (currentIndex >= 0 && !isHighlighted) {
 			// Mark as current and move to top (after highlighted models)
 			modelOptions[currentIndex].label = CURRENT_LABEL_FORMAT(
-				modelOptions[currentIndex].value
+				modelOptions[currentIndex].value,
 			);
 			if (currentIndex > 0) {
 				const [current] = modelOptions.splice(currentIndex, 1);
@@ -211,7 +211,7 @@ const handleSearch = async (
 	models: string[],
 	select: any,
 	text: any,
-	isCancel: any
+	isCancel: any,
 ): Promise<string | null> => {
 	// Search for models
 	const searchTerm = await text({
@@ -225,7 +225,7 @@ const handleSearch = async (
 	let filteredModels = models;
 	if (searchTerm) {
 		filteredModels = models.filter((model: string) =>
-			model.toLowerCase().includes((searchTerm as string).toLowerCase())
+			model.toLowerCase().includes((searchTerm as string).toLowerCase()),
 		);
 	}
 
@@ -267,7 +267,7 @@ export const selectModel = async (
 	apiKey: string,
 	currentModel?: string,
 	providerDef?: ProviderDef,
-	providerName?: string
+	providerName?: string,
 ): Promise<string | null> => {
 	// Default to provider's default model if none set
 	if (!currentModel || currentModel === 'undefined') {
@@ -319,7 +319,7 @@ export const selectModel = async (
 	} else {
 		// Fallback to manual input
 		console.log(
-			'Could not fetch available models. Please specify a model name manually.'
+			'Could not fetch available models. Please specify a model name manually.',
 		);
 		const { text, isCancel } = await import('@clack/prompts');
 		try {
