@@ -13,48 +13,37 @@ const createAicommits = (fixture: FsFixture) => {
 	const homeEnv = {
 		HOME: fixture.path, // Linux
 		USERPROFILE: fixture.path, // Windows
+		NODE_ENV: 'test', // Suppress dev-rebuild stale check
 	};
 
-	return (
-		args?: string[],
-		options?: Options,
-	) => execaNode(aicommitsPath, args, {
-		cwd: fixture.path,
-		...options,
-		extendEnv: false,
-		env: {
-			...homeEnv,
-			...options?.env,
-		},
+	return (args?: string[], options?: Options) =>
+		execaNode(aicommitsPath, args, {
+			cwd: fixture.path,
+			...options,
+			extendEnv: false,
+			env: {
+				...homeEnv,
+				...options?.env,
+			},
 
-		// Block tsx nodeOptions
-		nodeOptions: [],
-	});
+			// Block tsx nodeOptions
+			nodeOptions: [],
+		});
 };
 
 export const createGit = async (cwd: string) => {
-	const git = (
-		command: string,
-		args?: string[],
-		options?: Options,
-	) => (
-		execa(
-			'git',
-			[command, ...(args || [])],
-			{
-				cwd,
-				...options,
-			},
-		)
-	);
+	const git = async (command: string, args?: string[], options?: Options) => {
+		const result = await execa('git', [command, ...(args || [])], {
+			cwd,
+			...options,
+		});
+		return { ...result, stdout: String(result.stdout ?? '') };
+	};
 
-	await git(
-		'init',
-		[
-			// In case of different default branch name
-			'--initial-branch=master',
-		],
-	);
+	await git('init', [
+		// In case of different default branch name
+		'--initial-branch=master',
+	]);
 
 	await git('config', ['user.name', 'name']);
 	await git('config', ['user.email', 'email']);
@@ -62,9 +51,7 @@ export const createGit = async (cwd: string) => {
 	return git;
 };
 
-export const createFixture = async (
-	source?: string | FileTree,
-) => {
+export const createFixture = async (source?: string | FileTree) => {
 	const fixture = await createFixtureBase(source);
 	const aicommits = createAicommits(fixture);
 
@@ -75,18 +62,15 @@ export const createFixture = async (
 };
 
 export const files = Object.freeze({
-	'.aicommits': `OPENAI_KEY=${process.env.OPENAI_KEY}`,
-	'data.json': Array.from({ length: 10 }, (_, i) => `${i}. Lorem ipsum dolor sit amet`).join('\n'),
+	'.aicommits': `OPENAI_API_KEY=${process.env.OPENAI_API_KEY}`,
+	'data.json': Array.from(
+		{ length: 10 },
+		(_, i) => `${i}. Lorem ipsum dolor sit amet`
+	).join('\n'),
 });
 
-export const assertOpenAiToken = () => {
-	if (!process.env.OPENAI_KEY) {
-		throw new Error('⚠️  process.env.OPENAI_KEY is necessary to run these tests. Skipping...');
-	}
-};
+
 
 // See ./diffs/README.md in order to generate diff files
-export const getDiff = async (diffName: string): Promise<string> => fs.readFile(
-	new URL(`fixtures/${diffName}`, import.meta.url),
-	'utf8',
-);
+export const getDiff = async (diffName: string): Promise<string> =>
+	fs.readFile(new URL(`fixtures/${diffName}`, import.meta.url), 'utf8');

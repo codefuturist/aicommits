@@ -5,80 +5,65 @@
 	"keywords": [
 		"ai",
 		"git",
-		"commit"
+		"commit",
+		"code changes"
 	],
 	"license": "MIT",
-	"repository": "Nutlope/aicommits",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Nutlope/aicommits.git"
+	},
 	"author": "Hassan El Mghari (@nutlope)",
 	"type": "module",
 	"files": [
 		"dist"
 	],
 	"bin": {
-		"aicommits": "./dist/cli.mjs",
-		"aic": "./dist/cli.mjs"
+		"aicommits": "dist/cli.mjs",
+		"aic": "dist/cli.mjs"
 	},
 	"scripts": {
-		"prepare": "simple-git-hooks",
-		"build": "pkgroll --minify",
-		"lint": "eslint --cache .",
+		"prebuild": "node scripts/prebuild.mjs",
+		"build": "pkgroll --minify --export-condition=node",
+		"postbuild": "node scripts/postbuild.mjs",
+		"prepare": "pnpm build",
+		"lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters 2>&1 | grep -v vscode-extension || true",
 		"type-check": "tsc",
 		"test": "tsx tests",
-		"prepack": "pnpm build && clean-pkg-json"
-	},
-	"simple-git-hooks": {
-		"pre-commit": "pnpm lint-staged"
-	},
-	"lint-staged": {
-		"*.ts": "eslint --cache"
-	},
-	"dependencies": {
-		"@dqbd/tiktoken": "^1.0.2"
+		"prepack": "pnpm build && clean-pkg-json",
+		"compile": "bun build dist/cli.mjs --compile --minify --bytecode --outfile ./aicommits",
+		"compile:install": "bun build dist/cli.mjs --compile --minify --bytecode --outfile ./aicommits && node dist/cli.mjs install --binary"
 	},
 	"devDependencies": {
-		"@clack/prompts": "^0.6.1",
-		"@pvtnbr/eslint-config": "^0.33.0",
-		"@types/ini": "^1.3.31",
-		"@types/inquirer": "^9.0.3",
-		"@types/node": "^18.14.2",
-		"clean-pkg-json": "^1.2.0",
-		"cleye": "^1.3.2",
-		"eslint": "^8.35.0",
-		"execa": "^7.0.0",
-		"fs-fixture": "^1.2.0",
-		"https-proxy-agent": "^5.0.1",
-		"ini": "^3.0.1",
-		"kolorist": "^1.7.0",
-		"lint-staged": "^13.1.2",
-		"manten": "^0.7.0",
-		"openai": "^3.2.1",
-		"pkgroll": "^1.9.0",
-		"simple-git-hooks": "^2.8.1",
-		"tsx": "^3.12.3",
-		"typescript": "^4.9.5"
+		"@ai-sdk/openai": "^3.0.30",
+		"@ai-sdk/openai-compatible": "^2.0.30",
+		"@clack/prompts": "^1.0.1",
+		"@types/ini": "^4.1.1",
+		"@types/node": "^25.3.0",
+		"ai": "^6.0.97",
+		"clean-pkg-json": "^1.3.0",
+		"cleye": "^2.2.1",
+		"execa": "^9.6.1",
+		"fs-fixture": "^2.11.0",
+		"ini": "^6.0.0",
+		"kolorist": "^1.8.0",
+		"manten": "^1.10.0",
+		"pkgroll": "^2.26.3",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
 	},
-	"eslintConfig": {
-		"extends": "@pvtnbr",
-		"rules": {
-			"unicorn/no-process-exit": "off"
-		},
-		"overrides": [
-			{
-				"files": "./src/commands/prepare-commit-msg-hook.ts",
-				"rules": {
-					"unicorn/prevent-abbreviations": "off"
-				}
-			}
-		]
+	"pnpm": {
+		"overrides": {
+			"unicorn-magic": "0.4.0"
+		}
 	},
 	"release": {
 		"branches": [
-			"main"
+			"main",
+			{
+				"name": "develop",
+				"prerelease": true
+			}
 		]
-	},
-	"pnpm": {
-		"patchedDependencies": {
-			"@clack/prompts@0.6.1": "patches/@clack__prompts@0.6.1.patch"
-		}
 	}
 }

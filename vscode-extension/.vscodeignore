@@ -1,0 +1,11 @@
+.vscode/**
+.vscode-test/**
+src/**
+tests/**
+.gitignore
+tsconfig.json
+tsconfig.test.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+**/*.map
+**/node_modules/**

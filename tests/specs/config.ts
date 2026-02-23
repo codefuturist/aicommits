@@ -6,8 +6,9 @@ import { createFixture } from '../utils.js';
 export default testSuite(({ describe }) => {
 	describe('config', async ({ test, describe }) => {
 		const { fixture, aicommits } = await createFixture();
-		const configPath = path.join(fixture.path, '.aicommits');
-		const openAiToken = 'OPENAI_KEY=sk-abc';
+		// XDG config path: $HOME/.config/aicommits/config (child process HOME = fixture.path)
+		const configPath = path.join(fixture.path, '.config', 'aicommits', 'config');
+		const openAiToken = 'OPENAI_API_KEY=abc';
 
 		test('set unknown config file', async () => {
 			const { stderr } = await aicommits(['config', 'set', 'UNKNOWN=1'], {
@@ -17,12 +18,15 @@ export default testSuite(({ describe }) => {
 			expect(stderr).toMatch('Invalid config property: UNKNOWN');
 		});
 
-		test('set invalid OPENAI_KEY', async () => {
-			const { stderr } = await aicommits(['config', 'set', 'OPENAI_KEY=abc'], {
-				reject: false,
-			});
+		test('set OPENAI_API_KEY', async () => {
+			const { stderr } = await aicommits(
+				['config', 'set', 'OPENAI_API_KEY=abc'],
+				{
+					reject: false,
+				}
+			);
 
-			expect(stderr).toMatch('Invalid config property OPENAI_KEY: Must start with "sk-"');
+			expect(stderr).toBe('');
 		});
 
 		await test('set config file', async () => {
@@ -33,8 +37,8 @@ export default testSuite(({ describe }) => {
 		});
 
 		await test('get config file', async () => {
-			const { stdout } = await aicommits(['config', 'get', 'OPENAI_KEY']);
-			expect(stdout).toBe(openAiToken);
+			const { stdout } = await aicommits(['config', 'get', 'OPENAI_API_KEY']);
+			expect(stdout).toBe('OPENAI_API_KEY=abc****');
 		});
 
 		await test('reading unknown config', async () => {
@@ -71,9 +75,12 @@ export default testSuite(({ describe }) => {
 
 		await describe('max-length', ({ test }) => {
 			test('must be an integer', async () => {
-				const { stderr } = await aicommits(['config', 'set', 'max-length=abc'], {
-					reject: false,
-				});
+				const { stderr } = await aicommits(
+					['config', 'set', 'max-length=abc'],
+					{
+						reject: false,
+					}
+				);
 
 				expect(stderr).toMatch('Must be an integer');
 			});
@@ -88,7 +95,7 @@ export default testSuite(({ describe }) => {
 
 			test('updates config', async () => {
 				const defaultConfig = await aicommits(['config', 'get', 'max-length']);
-				expect(defaultConfig.stdout).toBe('max-length=50');
+				expect(defaultConfig.stdout).toBe('max-length=72');
 
 				const maxLength = 'max-length=60';
 				await aicommits(['config', 'set', maxLength]);
@@ -99,18 +106,6 @@ export default testSuite(({ describe }) => {
 				const get = await aicommits(['config', 'get', 'max-length']);
 				expect(get.stdout).toBe(maxLength);
 			});
-		});
-
-		await test('set config file', async () => {
-			await aicommits(['config', 'set', openAiToken]);
-
-			const configFile = await fs.readFile(configPath, 'utf8');
-			expect(configFile).toMatch(openAiToken);
-		});
-
-		await test('get config file', async () => {
-			const { stdout } = await aicommits(['config', 'get', 'OPENAI_KEY']);
-			expect(stdout).toBe(openAiToken);
 		});
 
 		await fixture.rm();
