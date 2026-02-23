@@ -58,6 +58,9 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('aicommits.selectModel', () =>
 			handleSelectModel(context),
 		),
+		vscode.commands.registerCommand('aicommits.openSettings', () =>
+			vscode.commands.executeCommand('workbench.action.openSettings', 'aicommits'),
+		),
 		outputChannel,
 		statusBarItem,
 	);

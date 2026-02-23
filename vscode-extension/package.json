@@ -91,38 +91,51 @@
 		"commands": [
 			{
 				"command": "aicommits.generate",
-				"title": "AI Commits: Generate Commit Message",
+				"title": "Generate Commit Message",
+				"category": "AI Commits",
 				"icon": "$(sparkle)"
 			},
 			{
 				"command": "aicommits.generateConventional",
-				"title": "AI Commits: Generate Conventional Commit",
+				"title": "Generate Conventional Commit",
+				"category": "AI Commits",
 				"icon": "$(checklist)"
 			},
 			{
 				"command": "aicommits.generateGitmoji",
-				"title": "AI Commits: Generate Gitmoji Commit",
+				"title": "Generate Gitmoji Commit",
+				"category": "AI Commits",
 				"icon": "$(symbol-enum)"
 			},
 			{
 				"command": "aicommits.generateAndCommit",
-				"title": "AI Commits: Generate & Commit",
+				"title": "Generate & Commit",
+				"category": "AI Commits",
 				"icon": "$(check)"
 			},
 			{
 				"command": "aicommits.regenerate",
-				"title": "AI Commits: Regenerate Message",
+				"title": "Regenerate Message",
+				"category": "AI Commits",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "aicommits.setup",
-				"title": "AI Commits: Setup Provider",
+				"title": "Setup Provider",
+				"category": "AI Commits",
 				"icon": "$(gear)"
 			},
 			{
 				"command": "aicommits.selectModel",
-				"title": "AI Commits: Select Model",
+				"title": "Select Model",
+				"category": "AI Commits",
 				"icon": "$(server)"
+			},
+			{
+				"command": "aicommits.openSettings",
+				"title": "Open Settings",
+				"category": "AI Commits",
+				"icon": "$(settings-gear)"
 			}
 		],
 		"menus": {
@@ -131,6 +144,36 @@
 					"command": "aicommits.generate",
 					"group": "navigation@1",
 					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.regenerate",
+					"group": "navigation@2",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateAndCommit",
+					"group": "navigation@3",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateConventional",
+					"group": "1_aicommits@1",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateGitmoji",
+					"group": "1_aicommits@2",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.setup",
+					"group": "2_config@1",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.selectModel",
+					"group": "2_config@2",
+					"when": "scmProvider == git"
 				}
 			],
 			"scm/resourceGroup/context": [
@@ -138,30 +181,54 @@
 					"command": "aicommits.generate",
 					"group": "1_modification@1",
 					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateConventional",
+					"group": "1_modification@2",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateGitmoji",
+					"group": "1_modification@3",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateAndCommit",
+					"group": "1_modification@4",
+					"when": "scmProvider == git"
+				}
+			],
+			"scm/resourceState/context": [
+				{
+					"command": "aicommits.generate",
+					"group": "1_modification@1",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateConventional",
+					"group": "1_modification@2",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateGitmoji",
+					"group": "1_modification@3",
+					"when": "scmProvider == git"
+				},
+				{
+					"command": "aicommits.generateAndCommit",
+					"group": "1_modification@4",
+					"when": "scmProvider == git"
 				}
 			],
 			"commandPalette": [
-				{
-					"command": "aicommits.generate"
-				},
-				{
-					"command": "aicommits.generateConventional"
-				},
-				{
-					"command": "aicommits.generateGitmoji"
-				},
-				{
-					"command": "aicommits.generateAndCommit"
-				},
-				{
-					"command": "aicommits.regenerate"
-				},
-				{
-					"command": "aicommits.setup"
-				},
-				{
-					"command": "aicommits.selectModel"
-				}
+				{ "command": "aicommits.generate" },
+				{ "command": "aicommits.generateConventional" },
+				{ "command": "aicommits.generateGitmoji" },
+				{ "command": "aicommits.generateAndCommit" },
+				{ "command": "aicommits.regenerate" },
+				{ "command": "aicommits.setup" },
+				{ "command": "aicommits.selectModel" },
+				{ "command": "aicommits.openSettings" }
 			]
 		},
 		"keybindings": [
@@ -175,6 +242,12 @@
 				"command": "aicommits.generateAndCommit",
 				"key": "ctrl+k ctrl+c",
 				"mac": "cmd+k cmd+c",
+				"when": "!terminalFocus"
+			},
+			{
+				"command": "aicommits.regenerate",
+				"key": "ctrl+k ctrl+r",
+				"mac": "cmd+k cmd+r",
 				"when": "!terminalFocus"
 			}
 		],
