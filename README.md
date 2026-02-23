@@ -24,14 +24,10 @@
 
    # or via SSH (useful on servers with a deploy key)
    pnpm add -g --allow-build=aicommits "git+ssh://git@github.com/codefuturist/aicommits.git#develop"
-
-   # or from the monorepository via SSH (requires access to codefuturist/monorepository)
-   pnpm add -g --allow-build=aicommits "git+ssh://git@github.com/codefuturist/monorepository.git#develop&path:/apps/cli/aicommits"
    ```
 
-   > **`--allow-build`** is required by pnpm v9+ security policy so the package can run its `prepare` build script during install.
+   > **`--allow-build`** is required by pnpm v10+ security policy so the package can run its `prepare` build script during install (dist/ is not committed to git — it is built from source on install).
    > If pnpm is not in PATH, run `pnpm setup` first (adds `PNPM_HOME` to your shell profile).
-   > The monorepository variant uses `path:/apps/cli/aicommits` (the registered submodule path) and requires SSH agent forwarding or a key with access to the monorepository.
 
    Or with npm:
 

@@ -1,2 +1,0 @@
-#!/usr/bin/env node
-import"./cli-DGXyOzRB.mjs";import"tty";import"node:url";import"node:child_process";import"node:string_decoder";import"node:util";import"node:process";import"node:tty";import"node:path";import"child_process";import"path";import"fs";import"node:timers/promises";import"node:os";import"node:events";import"node:v8";import"node:fs";import"node:stream";import"node:buffer";import"node:stream/promises";import"node:readline";import"fs/promises";import"os";import"crypto";import"url";import"util";
