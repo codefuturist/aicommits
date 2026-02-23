@@ -13,6 +13,7 @@ const createAicommits = (fixture: FsFixture) => {
 	const homeEnv = {
 		HOME: fixture.path, // Linux
 		USERPROFILE: fixture.path, // Windows
+		NODE_ENV: 'test', // Suppress dev-rebuild stale check
 	};
 
 	return (args?: string[], options?: Options) =>
