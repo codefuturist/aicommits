@@ -34,7 +34,23 @@ const gitCommit = git('rev-parse --short HEAD');
 const gitCommitFull = git('rev-parse HEAD');
 const srcFingerprint = getSourceFingerprint();
 
+function getGitVersion() {
+	const describe = git('describe --tags --always');
+	if (!describe) return null;
+
+	// v2.0.0-develop.22-54-ge09020e → 2.0.0-develop.22+54.e09020e
+	const match = describe.match(/^v?(.+?)(?:-(\d+)-g([0-9a-f]+))?$/);
+	if (!match) return describe.replace(/^v/, '');
+
+	const [, tag, ahead, hash] = match;
+	if (!ahead || ahead === '0') return tag;
+	return `${tag}+${ahead}.${hash}`;
+}
+
+const gitVersion = getGitVersion();
+
 const meta = {
+	version: gitVersion || 'unknown',
 	srcTreeHash: srcTreeHash || 'unknown',
 	srcFingerprint,
 	gitCommit: gitCommit || 'unknown',

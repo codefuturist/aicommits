@@ -2,8 +2,24 @@
 globalThis.AI_SDK_LOG_WARNINGS = false;
 
 import { cli } from 'cleye';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import pkg from '../package.json';
-const { description, version } = pkg;
+const { description, version: pkgVersion } = pkg;
+
+// Derive display version from build metadata (git describe), falling back to package.json
+function getDisplayVersion(): string {
+	if (pkgVersion !== '0.0.0-semantic-release') return pkgVersion;
+	try {
+		const metaPath = join(dirname(fileURLToPath(import.meta.url)), '.build-meta.json');
+		const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
+		if (meta.version && meta.version !== 'unknown') return meta.version;
+	} catch {}
+	return pkgVersion;
+}
+
+const version = getDisplayVersion();
 import aicommits from './commands/aicommits.js';
 import prepareCommitMessageHook from './commands/prepare-commit-msg-hook.js';
 import configCommand from './commands/config.js';
@@ -22,8 +38,8 @@ import { checkAndRebuildIfStale } from './utils/dev-rebuild.js';
 
 // Auto-update check - runs in production to update under the hood
 // Skip during git hooks to avoid breaking commit flow
-if (!isCalledFromGitHook && version !== '0.0.0-semantic-release') {
-	const distTag = version.includes('-') ? 'develop' : 'latest';
+if (!isCalledFromGitHook && pkgVersion !== '0.0.0-semantic-release') {
+	const distTag = pkgVersion.includes('-') ? 'develop' : 'latest';
 
 	// Check for updates and auto-update if available
 	checkAndAutoUpdate({
@@ -34,7 +50,7 @@ if (!isCalledFromGitHook && version !== '0.0.0-semantic-release') {
 
 // Dev-rebuild check - detects stale builds for development installs
 // Skip during git hooks, for rebuild command itself, and for published versions
-if (!isCalledFromGitHook && version === '0.0.0-semantic-release') {
+if (!isCalledFromGitHook && pkgVersion === '0.0.0-semantic-release') {
 	const rawArgs = process.argv.slice(2);
 	const isRebuildCommand = rawArgs[0] === 'rebuild';
 	const isInstallCommand = rawArgs[0] === 'install' || rawArgs[0] === 'uninstall' || rawArgs[0] === 'compile';
