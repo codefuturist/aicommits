@@ -3,7 +3,7 @@
 // Used by the runtime freshness check to detect stale builds.
 
 import { execSync } from 'child_process';
-import { writeFileSync, mkdirSync } from 'fs';
+import { writeFileSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const distDir = join(process.cwd(), 'dist');
@@ -35,16 +35,42 @@ const gitCommitFull = git('rev-parse HEAD');
 const srcFingerprint = getSourceFingerprint();
 
 function getGitVersion() {
+	// Try full git describe with tags first (works in full clones / local dev)
 	const describe = git('describe --tags --always');
-	if (!describe) return null;
+	if (describe) {
+		// v2.0.0-develop.22-54-ge09020e → 2.0.0-develop.22+54.e09020e
+		const match = describe.match(/^v?(.+?)(?:-(\d+)-g([0-9a-f]+))?$/);
+		if (match) {
+			const [, tag, ahead, hash] = match;
+			if (!ahead || ahead === '0') return tag;
+			return `${tag}+${ahead}.${hash}`;
+		}
+		return describe.replace(/^v/, '');
+	}
 
-	// v2.0.0-develop.22-54-ge09020e → 2.0.0-develop.22+54.e09020e
-	const match = describe.match(/^v?(.+?)(?:-(\d+)-g([0-9a-f]+))?$/);
-	if (!match) return describe.replace(/^v/, '');
+	// No .git directory (pnpm tarball installs) — fetch latest tag via GitHub API
+	try {
+		const pkgJson = JSON.parse(
+			readFileSync(join(process.cwd(), 'package.json'), 'utf8'),
+		);
+		const repoUrl = typeof pkgJson.repository === 'string'
+			? pkgJson.repository
+			: pkgJson.repository?.url || '';
+		const repoMatch = repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
+		if (repoMatch) {
+			const apiUrl = `https://api.github.com/repos/${repoMatch[1]}/tags?per_page=1`;
+			const response = execSync(
+				`curl -sf -H "Accept: application/vnd.github.v3+json" "${apiUrl}"`,
+				{ encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 10000 },
+			);
+			const tags = JSON.parse(response);
+			if (tags.length > 0) {
+				return tags[0].name.replace(/^v/, '');
+			}
+		}
+	} catch {}
 
-	const [, tag, ahead, hash] = match;
-	if (!ahead || ahead === '0') return tag;
-	return `${tag}+${ahead}.${hash}`;
+	return null;
 }
 
 const gitVersion = getGitVersion();
