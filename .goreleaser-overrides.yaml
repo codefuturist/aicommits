@@ -1,0 +1,115 @@
+# =============================================================================
+# GoReleaser Overrides for aicommits
+# =============================================================================
+# Merged with base template via: yq eval-all '... *d ...'
+# Base: .just-modules/templates/goreleaser/.goreleaser-ts-cli.yaml
+# Run:  just goreleaser-build
+# =============================================================================
+
+project_name: aicommits
+
+# GoReleaser output directory — must differ from pkgroll's `dist/`
+dist: goreleaser-dist
+
+# Two-phase build: pkgroll bundles TS→JS, then Bun compiles JS→binary
+before:
+  hooks:
+    - pnpm install --frozen-lockfile
+    - pnpm run build
+
+builds:
+  - binary: aicommits
+    main: dist/cli.mjs
+    flags:
+      - --compile
+      - --minify
+      - --bytecode
+
+# Cosign signing (enabled for this project)
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    artifacts: checksum
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    output: true
+
+nfpms:
+  - id: aicommits-pkg
+    package_name: aicommits
+    vendor: "Hassan El Mghari"
+    homepage: "https://github.com/codefuturist/aicommits"
+    maintainer: "Colin Pandia <colin@pandia.io>"
+    description: "Writes your git commit messages for you with AI"
+    recommends:
+      - git
+
+release:
+  github:
+    owner: codefuturist
+    name: aicommits
+  name_template: "aicommits v{{ .Version }}"
+
+  header: |
+    ## aicommits v{{ .Version }}
+
+    Writes your git commit messages for you with AI.
+
+    ### Quick Install
+
+    **Homebrew** (macOS/Linux — once tap is published):
+    ```bash
+    brew install codefuturist/tap/aicommits
+    ```
+
+    **npm** (requires Node.js):
+    ```bash
+    npm install -g aicommits
+    ```
+
+    **Linux packages:**
+    ```bash
+    # Debian/Ubuntu
+    sudo dpkg -i aicommits_{{ .Version }}_amd64.deb
+
+    # Fedora/RHEL
+    sudo rpm -i aicommits-{{ .Version }}.x86_64.rpm
+
+    # Alpine
+    sudo apk add --allow-untrusted aicommits_{{ .Version }}_amd64.apk
+    ```
+
+    **Manual download:** grab the archive for your platform below, extract, and run:
+    ```bash
+    tar -xzf aicommits_{{ .Version }}_Linux_x86_64.tar.gz
+    ./aicommits --version
+    ```
+
+    > **Note:** Standalone binaries — no Node.js, Bun, or Deno runtime required.
+
+  footer: |
+    ---
+
+    **Full Changelog**: https://github.com/codefuturist/aicommits/blob/develop/CHANGELOG.md
+
+    ### Verification
+
+    Verify checksums:
+    ```bash
+    sha256sum -c aicommits_{{ .Version }}_checksums.txt
+    ```
+
+    Verify signatures (requires [cosign](https://docs.sigstore.dev/cosign/installation/)):
+    ```bash
+    cosign verify-blob \
+      --bundle aicommits_{{ .Version }}_checksums.txt.sigstore.json \
+      --certificate-identity-regexp=https://github.com/codefuturist \
+      --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+      aicommits_{{ .Version }}_checksums.txt
+    ```
+
+announce:
+  skip: "true"

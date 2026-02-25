@@ -24,3 +24,9 @@ dist
 
 # Eslint cache
 .eslintcache
+
+# GoReleaser output
+goreleaser-dist/
+
+# Generated GoReleaser config (from yq merge of base template + overrides)
+.goreleaser.yaml
