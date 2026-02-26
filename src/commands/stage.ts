@@ -24,7 +24,7 @@ import {
 import { getConfig } from '../utils/config-runtime.js';
 import { getProvider } from '../feature/providers/index.js';
 import { groupChangesWithAI, groupBoundariesWithAI, type CommitGroup } from '../utils/openai.js';
-import { detectProjectBoundaries, formatBoundarySummary, formatBoundaryDetails } from '../utils/project-detection.js';
+import { detectProjectBoundaries, formatBoundarySummary, formatBoundaryDetails, detectBoundaryFromCwd } from '../utils/project-detection.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 import { runPostCommit } from '../utils/post-commit.js';
 
@@ -80,7 +80,7 @@ Examples:
 			},
 			scope: {
 				type: String,
-				description: 'Only process changes in a specific directory/boundary',
+				description: 'Only process changes in a specific directory/boundary (use "auto" to detect from cwd)',
 				alias: 's',
 			},
 			scan: {
@@ -118,6 +118,23 @@ Examples:
 			const repoRoot = await assertGitRepo();
 			const isStaged = argv.flags.staged;
 
+			// Resolve --scope: 'auto' detects from CWD, explicit path detects from that path
+			let resolvedScopeFlag = argv.flags.scope;
+			if (resolvedScopeFlag === 'auto') {
+				const boundary = detectBoundaryFromCwd(repoRoot);
+				if (boundary) {
+					resolvedScopeFlag = boundary.path;
+				} else {
+					resolvedScopeFlag = undefined; // At git root, no scoping
+				}
+			} else if (resolvedScopeFlag && resolvedScopeFlag !== 'none') {
+				const boundary = detectBoundaryFromCwd(repoRoot, resolvedScopeFlag);
+				if (boundary) {
+					resolvedScopeFlag = boundary.path;
+				}
+				// If no boundary found, keep the literal path
+			}
+
 			// Validate mutually exclusive flags
 			if (isStaged && argv.flags.all) {
 				throw new KnownError(
@@ -145,8 +162,8 @@ Examples:
 				diff = stagedResult.diff;
 
 				// Apply --scope filter
-				if (argv.flags.scope) {
-					const scope = argv.flags.scope.replace(/\/$/, '');
+				if (resolvedScopeFlag) {
+					const scope = resolvedScopeFlag.replace(/\/$/, '');
 					files = files.filter((f) => f.startsWith(scope + '/') || f === scope);
 					if (files.length === 0) {
 						detectingFiles.stop('No staged changes in scope');
@@ -206,8 +223,8 @@ Examples:
 				diff = unstagedDiff;
 
 				// Apply --scope filter
-				if (argv.flags.scope) {
-					const scope = argv.flags.scope.replace(/\/$/, '');
+				if (resolvedScopeFlag) {
+					const scope = resolvedScopeFlag.replace(/\/$/, '');
 					files = files.filter((f) => f.startsWith(scope + '/') || f === scope);
 					if (files.length === 0) {
 						detectingFiles.stop('No changes in scope');
@@ -324,7 +341,7 @@ Examples:
 				// Interactive boundary selection (unless --yes or --scope)
 				let selectedBoundaries = boundaries;
 				let useFlatMode = false;
-				if (!argv.flags.yes && !argv.flags.scope && !argv.flags.dryRun && boundaries.length > 1) {
+				if (!argv.flags.yes && !resolvedScopeFlag && !argv.flags.dryRun && boundaries.length > 1) {
 					const boundaryAction = await select({
 						message: `Process all ${boundaries.length} boundaries, or select specific ones?`,
 						options: [

@@ -37,14 +37,16 @@ const isLockFile = (file: string) => {
 
 const filesToExclude = lockFilePatterns.map(excludeFromDiff);
 
-export const getStagedDiff = async (excludeFiles?: string[]) => {
+export const getStagedDiff = async (excludeFiles?: string[], scopePath?: string) => {
 	const diffCached = ['diff', '--cached', '--diff-algorithm=minimal'];
+	const pathspec = scopePath ? ['--', scopePath] : [];
 
 	// First, get all staged files without any excludes
 	const { stdout: allFilesOutput } = await execa('git', [
 		...diffCached,
 		'--name-only',
 		...(excludeFiles ? excludeFiles.map(excludeFromDiff) : []),
+		...pathspec,
 	]);
 
 	if (!allFilesOutput) {
@@ -73,6 +75,7 @@ export const getStagedDiff = async (excludeFiles?: string[]) => {
 		...diffCached,
 		'--name-only',
 		...excludes,
+		...pathspec,
 	]);
 
 	if (!files) {
@@ -82,12 +85,34 @@ export const getStagedDiff = async (excludeFiles?: string[]) => {
 	const { stdout: diff } = await execa('git', [
 		...diffCached,
 		...excludes,
+		...pathspec,
 	]);
 
 	return {
 		files: files.split('\n'),
 		diff,
 	};
+};
+
+/**
+ * Get the count of staged files outside a given scope path.
+ * Used to inform the user about excluded files when scoping.
+ */
+export const getStagedFilesOutsideScope = async (scopePath: string, excludeFiles?: string[]): Promise<string[]> => {
+	const diffCached = ['diff', '--cached', '--diff-algorithm=minimal'];
+	const excludes = excludeFiles ? excludeFiles.map(excludeFromDiff) : [];
+
+	const { stdout } = await execa('git', [
+		...diffCached,
+		'--name-only',
+		...excludes,
+	]);
+
+	if (!stdout) return [];
+
+	const allFiles = stdout.split('\n').filter(Boolean);
+	const scopePrefix = scopePath.endsWith('/') ? scopePath : scopePath + '/';
+	return allFiles.filter((f) => !f.startsWith(scopePrefix) && f !== scopePath);
 };
 
 export const getStagedDiffForFiles = async (files: string[], excludeFiles?: string[]) => {
@@ -188,11 +213,9 @@ export const getUnstagedDiffStat = async (files: string[]) => {
 };
 
 export const getPartiallyStaged = async (): Promise<string[]> => {
-	const { stdout: staged } = await execa('git', [
-		'diff', '--cached', '--name-only',
-	]);
-	const { stdout: unstaged } = await execa('git', [
-		'diff', '--name-only',
+	const [{ stdout: staged }, { stdout: unstaged }] = await Promise.all([
+		execa('git', ['diff', '--cached', '--name-only']),
+		execa('git', ['diff', '--name-only']),
 	]);
 	const stagedSet = new Set(staged.split('\n').filter(Boolean));
 	return unstaged.split('\n').filter(Boolean).filter((f) => stagedSet.has(f));

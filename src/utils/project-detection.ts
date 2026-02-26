@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, relative } from 'path';
 import { execa } from 'execa';
 import type { CommitGroup } from './openai.js';
 
@@ -258,6 +258,62 @@ function consolidateBoundaries(boundaries: ProjectBoundary[], maxCount: number):
 	regular.sort((a, b) => b.files.length - a.files.length);
 
 	return [...regular, ...autoGrouped];
+}
+
+/**
+ * Detected boundary from CWD — used for commit scoping.
+ */
+export interface CwdBoundary {
+	/** Relative path from git root (e.g., "apps/cli/aicommits") */
+	path: string;
+	/** Human-readable name (same as path, or "root" if at git root) */
+	name: string;
+	/** Project type (e.g., "node", "python", "rust") */
+	type: string;
+}
+
+/**
+ * Detect the project boundary by walking up from a starting directory.
+ * When `startPath` is omitted, uses the current working directory.
+ * When `startPath` is a relative path (e.g., "apps/api/src"), resolves it
+ * relative to the git root and walks up to find the nearest project marker.
+ * Returns the nearest boundary or null if no marker is found before the git root.
+ */
+export function detectBoundaryFromCwd(gitRoot: string, startPath?: string): CwdBoundary | null {
+	let startDir: string;
+
+	if (startPath) {
+		// Resolve explicit path: could be absolute or relative to git root
+		const resolved = startPath.startsWith('/')
+			? relative(gitRoot, startPath)
+			: startPath.replace(/\/$/, '');
+		if (!resolved || resolved.startsWith('..')) return null;
+		startDir = resolved;
+	} else {
+		// Default: use CWD
+		const cwd = process.cwd();
+		startDir = relative(gitRoot, cwd);
+		if (!startDir || startDir.startsWith('..')) return null;
+	}
+
+	// Walk up from startDir to git root, checking each directory for strong markers
+	let current = startDir;
+	while (current && current !== '.') {
+		for (const marker of STRONG_MARKERS) {
+			if (existsSync(join(gitRoot, current, marker.file))) {
+				return {
+					path: current,
+					name: current,
+					type: marker.type,
+				};
+			}
+		}
+		const parent = dirname(current);
+		if (parent === current) break;
+		current = parent;
+	}
+
+	return null;
 }
 
 /**

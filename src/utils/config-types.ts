@@ -131,6 +131,32 @@ const configParsers = {
 		if (!value || value.trim() === '') return undefined;
 		return value.trim();
 	},
+	scope(value?: string) {
+		if (!value || value.trim() === '') return 'none';
+		const v = value.trim().toLowerCase();
+		if (v === 'none' || v === 'auto') return v as 'none' | 'auto';
+		// Treat any other string as an explicit directory path (preserve original case)
+		return value.trim();
+	},
+	'sync-strategy'(value?: string) {
+		if (!value || value.trim() === '') return 'ask' as const;
+		const v = value.trim().toLowerCase();
+		parseAssert('sync-strategy', ['ask', 'merge', 'rebase'].includes(v), 'Must be ask, merge, or rebase');
+		return v as 'ask' | 'merge' | 'rebase';
+	},
+	'sync-auto-stash'(value?: string | boolean) {
+		if (value === undefined || value === null) return true;
+		if (typeof value === 'boolean') return value;
+		const v = String(value).trim().toLowerCase();
+		if (v === '') return true;
+		return v !== 'false' && v !== '0' && v !== 'no';
+	},
+	'sync-after-commit'(value?: string) {
+		if (!value || value.trim() === '') return 'false' as const;
+		const v = value.trim().toLowerCase();
+		parseAssert('sync-after-commit', ['false', 'prompt'].includes(v), 'Must be false or prompt');
+		return v as 'false' | 'prompt';
+	},
 } as const;
 
 type ConfigKeys = keyof typeof configParsers;

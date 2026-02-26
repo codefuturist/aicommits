@@ -119,6 +119,7 @@ aicommits --all # or -a
 - `--exclude` or `-x`: Files to exclude from AI analysis
 - `--type` or `-t`: Git commit message format (default: **plain**). Supports `plain`, `conventional`, and `gitmoji`
 - `--prompt` or `-p`: Custom prompt to guide the AI behavior (e.g., language, style)
+- `--scope` or `-s`: Scope commit to project boundary (default: **none**). Supports `auto`, `none`, or an explicit path
 - `--yes` or `-y`: Skip confirmation when committing after message generation (default: **false**)
 
 #### Generate multiple recommendations
@@ -174,7 +175,7 @@ aicommits split
 | `--scan` | | Show detected project boundaries and exit (no AI calls) |
 | `--yes` | `-y` | Auto-commit all groups without confirmation |
 | `--max-groups` | `-m` | Maximum groups per boundary (default: 3) |
-| `--scope` | `-s` | Only process changes in a specific directory/boundary |
+| `--scope` | `-s` | Only process changes in a specific directory/boundary (use `auto` to detect from cwd) |
 | `--type` | `-t` | Commit message format (`plain`, `conventional`, `gitmoji`) |
 | `--prompt` | `-p` | Custom prompt to guide grouping behavior |
 
@@ -418,6 +419,38 @@ Examples:
 aicommits config set type=conventional
 aicommits config set type=gitmoji
 aicommits config set type=plain
+```
+
+#### scope
+
+Default: `none`
+
+Scope commits to a project boundary within a monorepo. When enabled, only staged files within the detected boundary are included in the commit — files from other projects remain staged for separate commits.
+
+Available values:
+
+- `none`: No scoping, all staged files are committed (default)
+- `auto`: Auto-detect project boundary from your current working directory by walking up to the nearest project marker (`package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, etc.)
+- `<path>`: Detect boundary from the given path by walking up to the nearest project marker. If no marker is found, uses the path literally (e.g., `apps/api/src` resolves to `apps/api` if it contains `package.json`)
+
+```sh
+aicommits config set scope=auto   # always scope to CWD boundary
+aicommits config set scope=none   # disable scoping (default)
+
+# Or use the CLI flag per-invocation:
+aicommits --scope auto
+aicommits --scope apps/api             # scope to apps/api boundary
+aicommits --scope apps/api/src/utils   # detects apps/api as the boundary
+```
+
+When scoping is active, you'll see a summary of in-scope and excluded files:
+
+```
+🎯 Scope: apps/cli/aicommits (node)
+📁 Detected 12 staged files
+⚠  5 staged files outside scope (not included in this commit):
+   · packages/shared — 2 files
+   · apps/api — 3 files
 ```
 
 ## How it works

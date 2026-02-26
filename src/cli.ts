@@ -28,6 +28,7 @@ import modelCommand from './commands/model.js';
 import hookCommand, { isCalledFromGitHook } from './commands/hook.js';
 import prCommand from './commands/pr.js';
 import stageCommand from './commands/stage.js';
+import syncCommand from './commands/sync.js';
 import rebuildCommand from './commands/rebuild.js';
 import installCommand from './commands/install.js';
 import uninstallCommand from './commands/uninstall.js';
@@ -135,6 +136,12 @@ cli(
 					'Custom prompt to guide the LLM behavior (e.g., specific language, style instructions)',
 				alias: 'p',
 			},
+		scope: {
+			type: String,
+			description:
+				'Scope commit to project boundary (auto=detect from cwd, none=disabled, or a path)',
+			alias: 's',
+		},
 		version: {
 			type: Boolean,
 			description: 'Show version number',
@@ -142,7 +149,7 @@ cli(
 		},
 		},
 
-		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, rebuildCommand, installCommand, uninstallCommand, doctorCommand, compileCommand],
+		commands: [configCommand, setupCommand, modelCommand, hookCommand, prCommand, stageCommand, syncCommand, rebuildCommand, installCommand, uninstallCommand, doctorCommand, compileCommand],
 
 		help: {
 			description: `${description}
@@ -153,6 +160,7 @@ Examples:
   aicommits -y                       Generate and commit without confirmation
   aicommits -a -y                    Stage all tracked changes, generate, and commit
   aicommits -g 3                     Pick from 3 generated message options
+  aicommits -s auto                  Scope commit to detected project boundary (monorepo)
 
   # Customize output
   aicommits -t conventional          Use conventional commit format (feat:, fix:, etc.)
@@ -173,6 +181,14 @@ Examples:
   aicommits config set type=conventional          Set default commit format
   aicommits config set post-commit="git push"     Auto-push after every commit
   aicommits config set post-commit-rebuild=smart  Auto-rebuild binary after commits
+
+  # Sync with default branch
+  aicommits sync                     Interactive sync (asks merge or rebase)
+  aicommits sync --rebase            Rebase onto default branch
+  aicommits sync --merge             Merge default branch into current
+  aicommits sync -s auto             Scope-aware sync analysis (monorepo)
+  aicommits sync --abort             Abort an in-progress sync
+  aicommits sync --continue          Continue after resolving conflicts
 
   # Installation & maintenance
   aicommits hook install             Auto-generate messages on every git commit
@@ -202,6 +218,7 @@ Examples:
 				argv.flags.noVerify,
 				argv.flags.noPostCommit,
 				argv.flags.prompt,
+				argv.flags.scope,
 				rawArgv
 			);
 		}

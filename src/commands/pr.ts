@@ -87,35 +87,29 @@ Examples:
 
 			await assertGitRepo();
 
-			// Get current branch
-			const { stdout: currentBranch } = await execa('git', [
-				'branch',
-				'--show-current',
+			// Fetch current branch, repo URL, and default branch in parallel
+			const [
+				{ stdout: currentBranch },
+				{ stdout: remoteUrl },
+				defaultBranchResult,
+			] = await Promise.all([
+				execa('git', ['branch', '--show-current']),
+				execa('git', ['remote', 'get-url', 'origin']),
+				execa('git', ['symbolic-ref', 'refs/remotes/origin/HEAD']).catch(
+					() => ({ stdout: 'refs/remotes/origin/main' }),
+				),
 			]);
+
 			if (!currentBranch.trim()) {
 				throw new KnownError('Not on a branch');
 			}
 
-			// Get repo URL
-			const { stdout: remoteUrl } = await execa('git', [
-				'remote',
-				'get-url',
-				'origin',
-			]);
 			const repoInfo = parseRemoteUrl(remoteUrl);
 			const { provider, owner, repo } = repoInfo;
 
-			// Get default branch from git remote
-			let defaultBranch = 'main';
-			try {
-				const { stdout } = await execa('git', [
-					'symbolic-ref',
-					'refs/remotes/origin/HEAD',
-				]);
-				defaultBranch = stdout.trim().replace('refs/remotes/origin/', '');
-			} catch {
-				// Fallback to main if git command fails
-			}
+			const defaultBranch = defaultBranchResult.stdout
+				.trim()
+				.replace('refs/remotes/origin/', '');
 
 			// Check if on default branch
 			if (currentBranch.trim() === defaultBranch) {

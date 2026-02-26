@@ -1,15 +1,19 @@
 import { execa } from 'execa';
-import { black, green, yellow, bgCyan } from 'kolorist';
+import { black, green, yellow, dim, bgCyan, bold } from 'kolorist';
 import { copyToClipboard as copyMessage } from '../utils/clipboard.js';
 import {
 	intro,
 	outro,
 	spinner,
+	select,
+	isCancel,
+	log,
 } from '@clack/prompts';
 import {
 	assertGitRepo,
 	getStagedDiff,
 	getStagedDiffForFiles,
+	getStagedFilesOutsideScope,
 	getDetectedMessage,
 } from '../utils/git.js';
 import { getConfig } from '../utils/config-runtime.js';
@@ -20,8 +24,18 @@ import {
 } from '../utils/openai.js';
 import { KnownError, handleCommandError } from '../utils/error.js';
 import { runPostCommit } from '../utils/post-commit.js';
+import { detectBoundaryFromCwd } from '../utils/project-detection.js';
 
 import { getCommitMessage } from '../utils/commit-helpers.js';
+import {
+	fetchOrigin,
+	getDefaultBranch,
+	getCurrentBranch as getSyncCurrentBranch,
+	getBranchStatus,
+	getCommitsBehindForScope,
+	rebaseOnto,
+	mergeFrom,
+} from '../utils/sync.js';
 
 export default async (
 	generate: number | undefined,
@@ -33,12 +47,41 @@ export default async (
 	noVerify: boolean,
 	noPostCommit: boolean,
 	customPrompt: string | undefined,
+	scopeFlag: string | undefined,
 	rawArgv: string[]
 ) =>
 	(async () => {
 		intro(bgCyan(black(' aicommits ')));
 
-		await assertGitRepo();
+		const gitRoot = await assertGitRepo();
+
+		// Resolve scope: CLI flag > config > default ('none')
+		const config = await getConfig({
+			generate: generate?.toString(),
+			type: commitType?.toString(),
+		});
+		const scopeValue = scopeFlag || config.scope || 'none';
+		let resolvedScope: string | undefined;
+		let scopeBoundaryInfo: { name: string; type: string } | undefined;
+
+		if (scopeValue === 'auto') {
+			const boundary = detectBoundaryFromCwd(gitRoot);
+			if (boundary) {
+				resolvedScope = boundary.path;
+				scopeBoundaryInfo = { name: boundary.name, type: boundary.type };
+			}
+			// If no boundary detected (CWD is at git root), no scoping applied
+		} else if (scopeValue !== 'none') {
+			// Explicit path: detect boundary from that path (walks up to nearest marker)
+			const boundary = detectBoundaryFromCwd(gitRoot, scopeValue);
+			if (boundary) {
+				resolvedScope = boundary.path;
+				scopeBoundaryInfo = { name: boundary.name, type: boundary.type };
+			} else {
+				// No marker found — use the literal path as scope
+				resolvedScope = scopeValue;
+			}
+		}
 
 		const detectingFiles = spinner();
 
@@ -48,16 +91,58 @@ export default async (
 		}
 
 		detectingFiles.start('Detecting staged files');
-		const staged = await getStagedDiff(excludeFiles);
+		const staged = await getStagedDiff(excludeFiles, resolvedScope);
 
 		if (!staged) {
 			detectingFiles.stop('Detecting staged files');
+			if (resolvedScope) {
+				throw new KnownError(
+					`No staged changes found within scope: ${resolvedScope}\nStage your changes manually, or use \`--scope none\` to commit all staged files.`
+				);
+			}
 			throw new KnownError(
 				'No staged changes found. Stage your changes manually, or automatically stage all changes with the `--all` flag.'
 			);
 		}
 
-		if (staged.files.length <= 10) {
+		// Show scope indicator and file summary
+		if (resolvedScope) {
+			const typeLabel = scopeBoundaryInfo ? ` (${scopeBoundaryInfo.type})` : '';
+			if (staged.files.length <= 10) {
+				detectingFiles.stop(
+					`🎯 Scope: ${resolvedScope}${typeLabel}\n📁 ${getDetectedMessage(staged.files)}:\n${staged.files
+						.map((file) => `     ${file}`)
+						.join('\n')}`
+				);
+			} else {
+				detectingFiles.stop(
+					`🎯 Scope: ${resolvedScope}${typeLabel}\n📁 ${getDetectedMessage(staged.files)}`
+				);
+			}
+
+			// Show excluded files summary
+			const outsideFiles = await getStagedFilesOutsideScope(resolvedScope, excludeFiles);
+			if (outsideFiles.length > 0) {
+				// Group by top-level directory
+				const groups = new Map<string, number>();
+				for (const f of outsideFiles) {
+					const topDir = f.includes('/') ? f.split('/')[0] : '.';
+					groups.set(topDir, (groups.get(topDir) || 0) + 1);
+				}
+				const groupLines = [...groups.entries()]
+					.sort((a, b) => b[1] - a[1])
+					.slice(0, 5)
+					.map(([dir, count]) => `     ${dim('·')} ${dir} — ${count} file${count > 1 ? 's' : ''}`);
+				console.log(`  ${yellow('⚠')}  ${outsideFiles.length} staged file${outsideFiles.length > 1 ? 's' : ''} outside scope (not included in this commit):`);
+				for (const line of groupLines) {
+					console.log(line);
+				}
+				if (groups.size > 5) {
+					console.log(`     ${dim(`… and ${groups.size - 5} more directories`)}`);
+				}
+				console.log('');
+			}
+		} else if (staged.files.length <= 10) {
 			detectingFiles.stop(
 				`📁 ${getDetectedMessage(staged.files)}:\n${staged.files
 					.map((file) => `     ${file}`)
@@ -66,11 +151,6 @@ export default async (
 		} else {
 			detectingFiles.stop(`📁 ${getDetectedMessage(staged.files)}`);
 		}
-
-		const config = await getConfig({
-			generate: generate?.toString(),
-			type: commitType?.toString(),
-		});
 
 		const providerInstance = getProvider(config);
 		if (!providerInstance) {
@@ -263,6 +343,10 @@ export default async (
 				if (noVerify) {
 					commitArgs.push('--no-verify');
 				}
+				// When scoped, use pathspec to commit only in-scope files
+				if (resolvedScope) {
+					commitArgs.push('--', resolvedScope);
+				}
 				await execa('git', ['commit', ...commitArgs, ...rawArgv], {
 					stdio: 'inherit',
 					cleanup: true,
@@ -273,6 +357,11 @@ export default async (
 			// Run post-commit actions
 			if (!noPostCommit) {
 				await runPostCommit(config, !skipConfirm);
+			}
+
+			// Optional sync-after-commit check
+			if (!noPostCommit && config['sync-after-commit'] === 'prompt' && !skipConfirm) {
+				await checkSyncAfterCommit(resolvedScope);
 			}
 		} catch (error: any) {
 			if (error.timedOut) {
@@ -296,3 +385,65 @@ export default async (
 			throw error;
 		}
 	})().catch(handleCommandError);
+
+async function checkSyncAfterCommit(
+	scopePath?: string,
+): Promise<void> {
+	try {
+		const [currentBranch, defaultBranch] = await Promise.all([
+			getSyncCurrentBranch(),
+			getDefaultBranch(),
+		]);
+		if (!currentBranch || currentBranch === defaultBranch) return;
+
+		await fetchOrigin();
+		const status = await getBranchStatus(defaultBranch);
+		if (status.behind === 0) return;
+
+		// Scope-aware: only prompt if incoming commits affect the scope
+		let scopeRelevant = true;
+		let scopeInfo = '';
+		if (scopePath) {
+			const scopeBehind = await getCommitsBehindForScope(defaultBranch, scopePath);
+			if (scopeBehind === 0) {
+				scopeRelevant = false;
+			} else {
+				scopeInfo = ` (${scopeBehind} affect ${scopePath})`;
+			}
+		}
+
+		if (!scopeRelevant) return;
+
+		log.info(
+			`ℹ Your branch is ${bold(String(status.behind))} commit${status.behind !== 1 ? 's' : ''} behind ${defaultBranch}${scopeInfo}`,
+		);
+
+		const action = await select({
+			message: `Sync with ${defaultBranch}?`,
+			options: [
+				{ value: 'skip', label: 'Skip' },
+				{ value: 'rebase', label: `Rebase onto ${defaultBranch}` },
+				{ value: 'merge', label: `Merge ${defaultBranch}` },
+			],
+		});
+
+		if (isCancel(action) || action === 'skip') return;
+
+		const result =
+			action === 'rebase'
+				? await rebaseOnto(defaultBranch)
+				: await mergeFrom(defaultBranch);
+
+		if (result.success) {
+			log.success(
+				`✔ ${action === 'rebase' ? 'Rebased' : 'Merged'} successfully`,
+			);
+		} else {
+			log.warn(
+				`⚠ Conflicts detected. Run ${dim('aicommits sync --continue')} after resolving.`,
+			);
+		}
+	} catch {
+		// Silently ignore sync check failures — don't break the commit flow
+	}
+}

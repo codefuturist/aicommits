@@ -37,6 +37,7 @@
 	"devDependencies": {
 		"@ai-sdk/openai": "^3.0.30",
 		"@ai-sdk/openai-compatible": "^2.0.30",
+		"@ast-grep/cli": "^0.41.0",
 		"@clack/prompts": "^1.0.1",
 		"@types/ini": "^4.1.1",
 		"@types/node": "^25.3.0",
